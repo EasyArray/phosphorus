@@ -223,8 +223,8 @@ class LambdaVal(PhiVal):
         bindings.update(dict(zip(self.args, args)))
         #print("LambdaVal call with body " + str(self.body) + " bindings: " + str(bindings))
 
-        if SemType.type(args[0]) != self.semtype()[0]:
-            raise ValueError(f"{args[0]} is wrong type; should be {self.semtype()[0]}")
+#        if SemType.type(args[0]) != self.semtype()[0]:
+#            raise ValueError(f"{args[0]} is wrong type; should be {self.semtype()[0]}")
         
         if self.guard is not None:
             s = self.guard.update(bindings)
