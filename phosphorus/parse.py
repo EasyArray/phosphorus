@@ -128,7 +128,7 @@ class Span(list):
                         item = item.sub({item.args[0] : peek.ev(False, False)}) #Basically run the func without checking types/domain restrictions
                         next(enum) #skip the arg
 
-                mylog("Finally", item)
+                mylog("Finally" + str(item))
                 item = Span.parse(str(item))
                 #span.append(item)
                 #item = Span.parse("(" + ",".join(f"{key}={value}" for key,value in subs.items()) + ")")[0]
@@ -138,7 +138,7 @@ class Span(list):
                 item = item.update(subs) #Could this do too many replacements?
             
             span.append(item)
-        mylog("Returning", item.debugstr())
+        mylog("Returning" + item.debugstr())
         return span
 
 #NOTE: Can't for the life of me get the async runcode to work...
