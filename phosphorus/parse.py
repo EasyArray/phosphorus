@@ -87,6 +87,7 @@ class Span(list):
         
     #Idea: instead of just the lambdas, eval each Span as possible?
     def update(self,subs):
+        def mylog(s): log(s,"Span.update")
         from .phival import LambdaVal, ConstantVal
         span = Span()
         span.type = self.type
@@ -96,48 +97,48 @@ class Span(list):
             if len(self) > n+1:
                 peek = self[n+1]
             
-            #print("Checking " + str(item))
+            mylog("Checking " + str(item))
             if item.type == NAME and item.string in subs and peek is not None and peek.string != "=":
                 s = item.string
                 spaces = item.spacebefore
                 #item = ConstantVal(s).update(subs)                
                 item = subs[item.string]
-                #print(f"Replacing {s} -> {item}::{type(item)}")
+                mylog(f"Replacing {s} -> {item}::{type(item)}")
                 if not isinstance(item, LambdaVal):
                     #s = get_ipython().transform_cell(str(item)).strip() #remove final newline
                     s = str(item) #Problem if we want to use keywords as ConstantVals?
-                    #print(f"|{item}| transforms to |{s}|")
+                    mylog(f"|{item}| transforms to |{s}|")
                     item = Span.parse(spaces + s)
-                    #print(f"Parsed: |{item}|")
+                    mylog(f"Parsed: |{item}|")
                     if item.printlen() == 1: item = item[0]
             
             if item.type == "lambda":
-                #print("Found lambda span " + str(item))
+                mylog("Found lambda span " + str(item))
                 item = LambdaVal.parse(item)
-                #print("Parsed " + str(item))
+                mylog("Parsed " + str(item))
                 if subs: item = item(**subs)
-                #print("With subs " + str(item))
+                mylog("With subs " + str(item))
                 
             if isinstance(item, LambdaVal):
-                #print("Found lambda " + str(item))
+                mylog("Found lambda " + str(item))
                 if peek is not None:
-                    #print(f"Next item: {peek}::{type(peek)}")
+                    mylog(f"Next item: {peek}::{type(peek)}")
                     if isinstance(peek, Span) and peek[0].string == "(":
                         peek = peek.update(subs) #apply bindings to args of lambda
                         item = item.sub({item.args[0] : peek.ev(False, False)}) #Basically run the func without checking types/domain restrictions
                         next(enum) #skip the arg
 
-                #print("Finally", item)
+                mylog("Finally", item)
                 item = Span.parse(str(item))
                 #span.append(item)
                 #item = Span.parse("(" + ",".join(f"{key}={value}" for key,value in subs.items()) + ")")[0]
-                #print("Adding " + str(item) + " to lambda")
+                mylog("Adding " + str(item) + " to lambda")
 
             elif isinstance(item,Span):
                 item = item.update(subs) #Could this do too many replacements?
             
             span.append(item)
-        #print("Returning", item.debugstr())
+        mylog("Returning", item.debugstr())
         return span
 
 #NOTE: Can't for the life of me get the async runcode to work...
@@ -282,9 +283,20 @@ def totokens(s):
             try: yield from totokens(repl)
             except TokenError as e: pass #Ignore unclosed delimiters
         prevend = tokeninfo.end
+    
+_debugging_contexts = dict()
+def debugging(context="", on = True):
+    global _debugging_contexts
+    old =_debugging_contexts.get(context)
+    _debugging_contexts[context] = on
+    return old
+    
+def log(s,context=""):
+    if _debugging_contexts.get("") or _debugging_contexts.get(context):
+        print(s)
         
 _errors_on = True
-def errors_on(b):
+def errors_on(b, context=""):
     global _errors_on
     old = _errors_on
     _errors_on = b
