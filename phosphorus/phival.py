@@ -105,7 +105,7 @@ def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
     finally:
         if showparse is not None: 
             parseon = oldparse
-            mylog("Resetting parseon to", oldparse)
+            mylog("Resetting parseon to" + str(oldparse))
             
     if memoize != False: memo[x] = (out,rs,kwargs)
     return out[0]
