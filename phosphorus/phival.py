@@ -3,7 +3,7 @@ from graphviz import Graph
 from numbers import Number
 import builtins; import ast
 import re; import time
-from .parse import Span, errors_on
+from .parse import Span, errors_on, log, debugging
 
 ip = get_ipython()
 """ ip is the ipython object, provides useful methods """
@@ -13,6 +13,11 @@ rules = {}
 class Lex(dict):
     def __missing__(self, key):
         return key
+    
+    def update(self, *args, **kwargs):
+        global memo
+        memo = {} #redo memoization if you update the lexicon
+        super().update(*args, **kwargs)
 
 lex = Lex()
 """ stores our lexicon """
@@ -48,6 +53,7 @@ memo = {}
 def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
     """ interprets an item using the rules """
     global parseon, memo
+    def mylog(s): log(s,"interpret")
     
 #    if kwargs:
 #        #ip.push(kwargs)
@@ -57,24 +63,25 @@ def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
         oldparse = parseon
         parseon = showparse
         if showparse and memoize != False: memoize="Reset"
-        #print("Setting parseon to", showparse)
+        mylog("Setting parseon to", showparse)
         
+    mylog(f"memoize is {memoize}")
     if memoize == "Reset":
         memo = {}
     
-    #if parseon: print("Beginning parse of",x)
+    if parseon: mylog("Beginning parse of" + str(x))
     
     try:
         from_memory = False
         if memoize != False and x in memo:
             out, rs, kw = memo[x]
             if kw == kwargs: from_memory = True
-            #display(x, "From memory!")
+            mylog(str(x) + "From memory!")
             
         if not from_memory:
-            #print(f"Interpreting {x}")#; time.sleep(1)
+            mylog(f"Interpreting {x}")#; time.sleep(1)
             out1 = [(r,rules[r].run(x, **kwargs)) for r in rules]
-            #print({f"{r}->{o}" : type(o) for (r,o) in out1})
+            mylog({f"{r}->{o}" : type(o) for (r,o) in out1})
 
             rs = [r for (r,o) in out1 if o is not None]
             #out = [o for n,o in enumerate(out) if o is not None if o not in out[:n]]
@@ -98,7 +105,7 @@ def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
     finally:
         if showparse is not None: 
             parseon = oldparse
-            #print("Resetting parseon to", oldparse)
+            mylog("Resetting parseon to", oldparse)
             
     if memoize != False: memo[x] = (out,rs,kwargs)
     return out[0]
@@ -613,6 +620,8 @@ class Rule(object):
         return out
     
     def register(self):
+        global memo
+        memo = {} # Reset memoization with new rule
         rules[self.name] = self
     
     def deregister(name=None):
