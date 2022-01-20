@@ -63,7 +63,7 @@ def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
         oldparse = parseon
         parseon = showparse
         if showparse and memoize != False: memoize="Reset"
-        mylog("Setting parseon to", showparse)
+        mylog("Setting parseon to" + str(showparse))
         
     mylog(f"memoize is {memoize}")
     if memoize == "Reset":
