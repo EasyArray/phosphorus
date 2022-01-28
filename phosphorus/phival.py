@@ -17,6 +17,7 @@ class Lex(dict):
     def update(self, *args, **kwargs):
         global memo
         memo = {} #redo memoization if you update the lexicon
+        print(f"Updating the global lexicon 'lex' to include {args[0]}")
         super().update(*args, **kwargs)
 
 lex = Lex()
@@ -622,6 +623,7 @@ class Rule(object):
     def register(self):
         global memo
         memo = {} # Reset memoization with new rule
+        print(f"Rule {self.name} added to global rule dictionary 'rules'")
         rules[self.name] = self
     
     def deregister(name=None):
