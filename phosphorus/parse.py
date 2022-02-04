@@ -89,6 +89,9 @@ class Span(list):
     def update(self,subs):
         def mylog(s): log(s,"Span.update")
         from .phival import LambdaVal, ConstantVal
+        
+        mylog(f"Updating {self.debugstr()} with subs {subs}")
+        
         span = Span()
         span.type = self.type
         enum = enumerate(self)
@@ -97,7 +100,7 @@ class Span(list):
             if len(self) > n+1:
                 peek = self[n+1]
             
-            mylog("Checking " + str(item))
+            mylog(f"Checking {item.debugstr()} in subs? {item.string in subs}")
             if item.type == NAME and item.string in subs and (peek.string != "=" if peek is not None else True):
                 s = item.string
                 spaces = item.spacebefore
