@@ -98,7 +98,7 @@ class Span(list):
                 peek = self[n+1]
             
             mylog("Checking " + str(item))
-            if item.type == NAME and item.string in subs and (peek.string != "=" if peek else True):
+            if item.type == NAME and item.string in subs and (peek.string != "=" if peek is not None else True):
                 s = item.string
                 spaces = item.spacebefore
                 #item = ConstantVal(s).update(subs)                
