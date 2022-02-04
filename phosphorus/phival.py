@@ -227,7 +227,8 @@ class LambdaVal(PhiVal):
         if kwargs:
             [kwargs.pop(arg,"") for arg in self.args]
             return LambdaVal(self.args, self.body, self.guard, {**self.env, **kwargs})
-
+        
+        # TODO: mesh with "sub" function below?
         bindings = {**self.env} #Copy the env dictionary
         bindings.update(dict(zip(self.args, args)))
         mylog("LambdaVal call with body " + str(self.body) + " bindings: " + str(bindings))
@@ -287,8 +288,8 @@ class LambdaVal(PhiVal):
         return LambdaVal((arg,), body, guard) 
         #return f'LambdaVal(("""{arg}""",),"""{str(body).lstrip()}""","""{guard}""")'
     
-    def sub(self, bindings=None):
-        if not bindings: bindings = self.env
+    def sub(self, bindings={}):
+        bindings = {**self.env}.update(bindings)
         return str(self.body.update(bindings))
         
     def semtype(self):
