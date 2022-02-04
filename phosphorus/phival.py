@@ -289,8 +289,9 @@ class LambdaVal(PhiVal):
         #return f'LambdaVal(("""{arg}""",),"""{str(body).lstrip()}""","""{guard}""")'
     
     def sub(self, bindings={}):
-        bindings = {**self.env}.update(bindings)
-        return str(self.body.update(bindings))
+        subs = {**self.env}
+        subs.update(bindings)
+        return str(self.body.update(subs))
         
     def semtype(self):
         if not self.stype:
