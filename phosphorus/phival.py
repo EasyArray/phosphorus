@@ -223,27 +223,28 @@ class LambdaVal(PhiVal):
         return out
     
     def __call__(self, *args, **kwargs):
+        def mylog(s): log(s,"LambdaVal.__call__")
         if kwargs:
             [kwargs.pop(arg,"") for arg in self.args]
             return LambdaVal(self.args, self.body, self.guard, {**self.env, **kwargs})
 
         bindings = {**self.env} #Copy the env dictionary
         bindings.update(dict(zip(self.args, args)))
-        #print("LambdaVal call with body " + str(self.body) + " bindings: " + str(bindings))
+        mylog("LambdaVal call with body " + str(self.body) + " bindings: " + str(bindings))
 
 #        if SemType.type(args[0]) != self.semtype()[0]:
 #            raise ValueError(f"{args[0]} is wrong type; should be {self.semtype()[0]}")
         
         if self.guard is not None:
             s = self.guard.update(bindings)
-            #print(f"Checking guard {s}")
+            mylog(f"Checking guard {s}")
             out = s.ev_n()
-            #print(f"Checking guard {s}\nGot output {out}::{type(out)}")
+            mylog(f"Checking guard {s}\nGot output {out}::{type(out)}")
             if isinstance(out, Span) or not out:
                 raise ValueError(f"Not in the domain: {args}")
         
         s = self.body.update(bindings) #self.sub(bindings)
-        #print("Lambda output: ", s.debugstr(), "Evaled", s.ev_n())
+        mylog("Lambda output: " + s.debugstr() + " Evaled " + str(s.ev_n()))
         out = s.ev_n()     
         # TODO: catch ValueErrors about domain internally, but still return spans for others?
         return out
