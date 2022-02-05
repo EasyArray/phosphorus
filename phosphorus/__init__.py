@@ -348,6 +348,9 @@ def load_ipython_extension(ip):
 
     """)
     
+from IPython.core.display import HTML
+def header(s, size="h3"): display(HTML(f"<{size}>{s}</{size}>"))
+
 if __name__ == "__main__":
     ip = get_ipython()
     load_ipython_extension(ip)
