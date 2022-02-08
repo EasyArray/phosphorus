@@ -112,23 +112,43 @@ def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
     return out[0]
 
 def ensurelist(x):
+    """ If x is not already a list or set, returns a list containing only x.
+        If x is already a list or set, returns x.
+    """
     if not isinstance(x, (frozenset,set,list,tuple)):
         x = [x]
     return x
     
 def step(x):
-    x = [a for b in ensurelist(x) for a in interpret(b,multiple=True)]
-    return list(dict.fromkeys(x))
+    """ Version of interpret for basic formal systems like MIU. Allows
+        multiple outputs, unlike a semantic interpretation function.
+        Applies all applicable rules to x then returns a list of the results.
+    """
+    x = ensurelist(x)
+    results = []
+    for y in x:
+        results.extend(interpret(y, multiple=True))
+    return list(set(results))
+    # x = [a for b in ensurelist(x) for a in interpret(b,multiple=True)]
+    # return list(dict.fromkeys(x))
 
 def repeat(f,x,n,accum=False):
+    """ Recursively applies f to x, n times.
+        If accum == False: returns the value of f(f(f(...f(x))))
+        If accum == True:  returns a list with each application:
+                           [x, f(x), f(f(x)), ..., f(f(f(...f(x))))]
+    """
     while n > 0:
         x = ensurelist(x) + f(x) if accum else f(x)
         n -= 1
     return x
 
 def nstep(x, n=1, accum=True): 
-    """ Version of interpret for basic formal systems like MIU. Allows
-        multiple outputs, unlike a semantic interpretation function.
+    """ Recursively applies all applicable rules to x, then the results
+        of those applications, and so on.
+        If accum == True:  returns a list of all results of all applications
+        If accum == False: returns a list of results of the final round of
+                           applications.
     """
     if not isinstance(x, (frozenset,set,list,tuple)):
         x = [x]
