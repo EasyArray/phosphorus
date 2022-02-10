@@ -330,23 +330,33 @@ class NumVal(int,PhiVal):
 
 class SetVal(frozenset,PhiVal):
     def __call__(self,*args):
+        """ Treats self as a function and applies the function to args.
+            - If self represents a function (i.e., all elements are pairs),
+              then applies the represented function to args. If there are
+              multiple possible outputs, return a list of all of them.
+            - Otherwise, treats self as an characteristic function, true
+              of the set's members.
+        """
         if len(args) == 0: return self
-        if len(args) == 1: 
+        if len(args) == 1:
             x = args[0]
+            #NOTE: this condition prevents SetVals from being functions that
+            #      take tuples as inputs, but means that if a tuple is passed
+            #      to a SetVal representing a function, the indicator function
+            #      of the underlying set is used instead.
             if not isinstance(x,tuple) and \
-               all(isinstance(x,tuple) and len(x)==2 for x in self):
+               all(isinstance(y,tuple) and len(y)==2 for y in self):
                 try:
                     out = [y[1] for y in self if y[0] == x]
                 except:
-                    return x in self
+                    return 1 if x in self else 0
                 else:
                     if not out: raise ValueError(f"{x} is not in the domain of {self}")
                     if len(out) == 1: out = out[0]
                     return out
             else:
-                return x in self
-        return args in self
-
+                return 1 if x in self else 0
+        return 1 if args in self else 0
     
     def __getitem__(self,x):
         return x in self
