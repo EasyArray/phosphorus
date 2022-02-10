@@ -331,10 +331,11 @@ class NumVal(int,PhiVal):
 class SetVal(frozenset,PhiVal):
     def __call__(self,*args):
         """ Treats self as a function and applies the function to args.
-            If self represents a function (i.e., all elements are pairs),
-            then applies the represented function to args. If there are
-            multiple possible outputs, return a list of all of them.
-            Otherwise, treats self as an indicator function
+            - If self represents a function (i.e., all elements are pairs),
+              then applies the represented function to args. If there are
+              multiple possible outputs, return a list of all of them.
+            - Otherwise, treats self as an characteristic function, true
+              of the set's members.
         """
         if len(args) == 0: return self
         if len(args) == 1:
