@@ -36,7 +36,7 @@ subs=[
     #(r'lambda([^:.]*)[:.]', r'lambda\1:'), # allow .'s instead of :'s after lambda
     (r'rule +([^ :]+):? +⟦?([^⟧]+)⟧? *(?:=>?|->) *(.+) \|\| +(.+)(?=\n)', r"Rule(\1, \2, '\3 if \4 else None')"),
     (r'rule +([^ :]+):? +⟦?([^⟧]+)⟧? *(?:=>?|->) *([^\n]+)(?=\n)', r"Rule(\1, \2, '\3')"),
-    (r'^lex\s*([^=\s\.].*?)\s*[=\s:]\s*([\s\S]+)', r'lex.update({"""\1""" : \2})'),
+    (r'^lex\s*([^=\s\.].*?)\s*[=\s:]\s*([\s\S]+)', r'lex.update({"""\1""" : \2})' '\n'),
     (r'\.\.\.?', r'<<'), #Hack to pick up ellipsis ranges: ValWrappers subs for << TODO: overload PhiVal's for <<
 ]
 """ Contains pairs: (regular expression, replacement string)
