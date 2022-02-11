@@ -115,22 +115,51 @@ def ensurelist(x):
     """ If x is not already a list or set, returns a list containing only x.
         If x is already a list or set, returns x.
     """
-    if not isinstance(x, (frozenset,set,list,tuple)):
-        x = [x]
-    return x
-    
-def step(x):
-    """ Version of interpret for basic formal systems like MIU. Allows
-        multiple outputs, unlike a semantic interpretation function.
-        Applies all applicable rules to x then returns a list of the results.
+    return x if isinstance(x, (frozenset, set, list, tuple)) else [x]
+
+def step(x, n=1, accum=True, showrules=False, **kwargs):
+    """ Similar to interpret, but for basic formal systems like MIU.
+        Finds all outputs after applying rules to x at most n times.
+        If accum == False: only finds outputs after exactly n rule applications
+        If showrules == True: prints out the rules being applid and the
+                              resulting outputs at each step.
     """
-    x = ensurelist(x)
-    results = []
-    for y in x:
-        results.extend(interpret(y, multiple=True))
-    return list(set(results))
-    # x = [a for b in ensurelist(x) for a in interpret(b,multiple=True)]
-    # return list(dict.fromkeys(x))
+    # outputs is a list of sets
+    # outputs[i] is the set of outputs after n steps
+    # if accum: keep all the steps around, but at each step only apply rules
+    #           to the previous step's outputs
+    # else:     only keep the last step around, since the earlier steps are irrelevant
+    outputs = []
+    outputs.append(set([x])) # after 0 steps, x is the only output
+
+    for i in range(n):
+        # for output printing, keep a dict of (input, rule) -> rule applied to input
+        # inputs come from outputs of the previous step
+        newresults = dict()
+        for y in outputs[-1]:
+            for r in rules:
+                newresults[(y,r)] = rules[r].run(y, **kwargs)
+        newresults = dict(filter(lambda pair: pair[1] is not None, newresults.items()))
+
+        if showrules:
+            if n > 1:
+                print(f"------\nStep {i + 1}\n------")
+            for y,r in newresults:
+                print(f"Ran rule {r} on {y} to get {newresults[(y,r)]}.")
+        
+        newoutputs = set()
+        for p in newresults:
+            newoutputs = newoutputs.union(newresults[p])
+        
+        if not accum:
+            outputs.pop(0)
+        outputs.append(newoutputs)
+
+        if showrules:
+            print(f"Current values: {set.union(*outputs) if accum else outputs[-1]}")
+    
+    # outputs is now a list of sets of outputs at each step
+    return list(set.union(*outputs))
 
 def repeat(f,x,n,accum=False):
     """ Recursively applies f to x, n times.
@@ -138,13 +167,15 @@ def repeat(f,x,n,accum=False):
         If accum == True:  returns a list with each application:
                            [x, f(x), f(f(x)), ..., f(f(f(...f(x))))]
     """
-    while n > 0:
-        x = ensurelist(x) + f(x) if accum else f(x)
-        n -= 1
+    for _ in range(n):
+        x = ensurelist(x) + ensurelist(f(x)) if accum else f(x)
     return x
 
 def nstep(x, n=1, accum=True): 
-    """ Recursively applies all applicable rules to x, then the results
+    """ DEPRECATED - step (above) is now able to apply rules many times,
+                     and should be used instead of nstep
+
+        Recursively applies all applicable rules to x, then the results
         of those applications, and so on.
         If accum == True:  returns a list of all results of all applications
         If accum == False: returns a list of results of the final round of
