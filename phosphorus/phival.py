@@ -48,68 +48,71 @@ def φ(*args, literal=False, **kwargs):
 
     return input
 
-#TODO: fix all the showparse, memoize stuff
 parseon = False
-memo = {}
-def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
-    """ interprets an item using the rules """
+# memo is a dictionary mapping inputs to [dictionaries that map bindings
+# to the corresponding output and rule used to achieve that output]
+# That is, memo: [input -> [binding -> (output, rule used)]]
+memo = dict()
+def interpret(x, showparse=None, memoize=True, **kwargs):
     global parseon, memo
-    def mylog(s): log(s,"interpret")
-    
-#    if kwargs:
-#        #ip.push(kwargs)
-#        memoize = "Reset"
-    
+    # tuple of bindings coming from kwargs, used for memoization
+    bindings = tuple(kwargs.items())
+
+    # set state of parseon to showparse so that any recursive
+    # calls that happen inherit the value of showparse
     if showparse is not None:
         oldparse = parseon
         parseon = showparse
-        if showparse and memoize != False: memoize="Reset"
-        mylog("Setting parseon to" + str(showparse))
-        
-    mylog(f"memoize is {memoize}")
-    if memoize == "Reset":
-        memo = {}
-    
-    if parseon: mylog("Beginning parse of" + str(x))
-    
+        # when memo is used, the parsing is never shown. So,
+        # when parsing should be shown, memo is reset so that
+        # everything gets computed by hand
+        if showparse and memoize != False:
+            memoize = dict()
+
+    # try/finally so that parseon state will always be reset at the end
     try:
-        from_memory = False
-        if memoize != False and x in memo:
-            out, rs, kw = memo[x]
-            if kw == kwargs: from_memory = True
-            mylog(str(x) + "From memory!")
-            
-        if not from_memory:
-            mylog(f"Interpreting {x}")#; time.sleep(1)
-            out1 = [(r,rules[r].run(x, **kwargs)) for r in rules]
-            mylog({f"{r}->{o}" : type(o) for (r,o) in out1})
-
-            rs = [r for (r,o) in out1 if o is not None]
-            #out = [o for n,o in enumerate(out) if o is not None if o not in out[:n]]
-            out = [o for (_,o) in out1 if o is not None]
-            if not out:
-                raise ValueError(str(x) + " is not interpretable")
+        out = None # will be the output of a rule applied to x
+        r   = None # will be the rule applied to x
         
-        if multiple: 
-            out = [o for l in out for o in l]
-            return out
+        # try to use memoization to avoid recomputing
+        if memoize and x in memo and bindings in memo[x]:
+            out, r = memo[x][bindings]
+        # if the previous if clause didn't happen, we need to compute the interpretation
+        else:
+            # get all results of applying rules to x
+            results   = [(r, rules[r].run(x, **kwargs)) for r in rules]
+            outputs   = [o for (_,o) in results if o is not None]
+            rulesused = [r for (r,o) in results if o is not None]
 
-        if len(out) > 1 and not isinstance(out, Span):
-            raise ValueError(f"{len(out)} interpretations for {x}: {out}")
+            # if there are no interpretations, raise an error
+            if not outputs:
+                raise ValueError(f"{str(x)} is not interpretable")
+            # if there is more than one interpretation, raise an error
+            elif len(outputs) > 1 and not isinstance(outputs, Span):
+                raise ValueError(f"{str(x)} has multiple interpretations")
 
+            out, r = outputs[0], rulesused[0]
+        
+        # show parsing if output was actually computed
         if parseon and not (memoize and x in memo):
             from IPython.display import display_html
-            try: res = out[0]._repr_html_()
-            except: res = out[0]
-            display_html(f"<span style='float:right; font-family:monospace'>(by {rs[0]})</span>"
+            try: res = out._repr_html_()
+            except: res = out
+            display_html(f"<span style='float:right; font-family:monospace'>(by {r})</span>"
                          f"<span style='margin-left: 40px'>⟦{x},{kwargs}⟧ = {res}</span>", raw=True)
     finally:
-        if showparse is not None: 
+        # set state of parseon back to what it was before this call
+        if showparse is not None:
             parseon = oldparse
-            mylog("Resetting parseon to" + str(oldparse))
-            
-    if memoize != False: memo[x] = (out,rs,kwargs)
-    return out[0]
+    
+    # save values for future
+    if memoize:
+        if x in memo:
+            memo[x][bindings] = (out, r)
+        else:
+            memo[x] = {bindings: (out, r)}
+    
+    return out
 
 def ensurelist(x):
     """ If x is not already a list or set, returns a list containing only x.
