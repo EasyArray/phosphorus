@@ -129,11 +129,8 @@ def step(x, n=1, accum=True, showrules=False, **kwargs):
     """
     # outputs is a list of sets
     # outputs[i] is the set of outputs after n steps
-    # if accum: keep all the steps around, but at each step only apply rules
-    #           to the previous step's outputs
-    # else:     only keep the last step around, since the earlier steps are irrelevant
     outputs = []
-    outputs.append(set([x])) # after 0 steps, x is the only output
+    outputs.append(set(ensurelist(x))) # after 0 steps, x is the only output
 
     for i in range(n):
         # for output printing, keep a dict of (input, rule) -> rule applied to input
@@ -145,24 +142,33 @@ def step(x, n=1, accum=True, showrules=False, **kwargs):
         newresults = dict(filter(lambda pair: pair[1] is not None, newresults.items()))
 
         if showrules:
+            from IPython.display import display_html
             if n > 1:
-                print(f"------\nStep {i + 1}\n------")
+                display_html(f"<span style='width:100%; border-bottom-style:solid; border-bottom-width:thin; display:inline-block; font-weight:bold;'>Step {i + 1}</span>", raw=True)
             for y,r in newresults:
-                print(f"Ran rule {r} on {y} to get {newresults[(y,r)]}.")
+                 display_html(f"<span style='float:right; font-family:monospace'>(by {r})</span>"
+                              f"<span>{y} &rightarrow; {newresults[(y,r)]}</span>", raw=True)
         
         newoutputs = set()
         for p in newresults:
-            newoutputs = newoutputs.union(newresults[p])
+            newoutputs.update(newresults[p])
         
+        # old steps are only needed if accumulating
         if not accum:
             outputs.pop(0)
         outputs.append(newoutputs)
 
+        # display current list of results
+        """ removed this to be consistent with showparse style in interpret
         if showrules:
             print(f"Current values: {set.union(*outputs) if accum else outputs[-1]}")
+        """
     
     # outputs is now a list of sets of outputs at each step
-    return list(set.union(*outputs))
+    final = []
+    for S in outputs:
+        final.extend(S)
+    return final
 
 def repeat(f,x,n,accum=False):
     """ Recursively applies f to x, n times.
