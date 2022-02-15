@@ -178,9 +178,9 @@ class PhiVal(object):
         stype = SemType.type(self)
         if stype:
             stype = repr(stype).replace(' ', '')
-            out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e7ffe5'>"
+            out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e7ffe5; color:black;'>"
                     f"∈{stype}</span>")
-        out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e5e5ff'>"
+        out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e5e5ff; color:black;'>"
                 f"{self.type()}</span>")
         return out
             
