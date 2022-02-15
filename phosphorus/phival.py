@@ -210,10 +210,22 @@ class PhiVal(object):
         
 class LambdaVal(PhiVal):
     def __init__(self, args, body, guard=None, env={}, explicit=None):
+        """ LambdaVal constructor
+            args, body, guard are all spans
+            To construct [λx : condition(x) . f(x)]:
+             - args would be "(x,)"
+             - body would be "f(x)"
+             - guard would be "condition(x)"
+            Generally, args contains the arguments of the function, guard
+            is a condition for the function to be run, and body is what
+            the function does to the arguments.
+            TODO: figure out env
+        """
         self.explicit = False
         if explicit is not None:
             explicit = dict(explicit) # turns list of pairs into dict if needed
-            parsed = LambdaVal.parse(f"[λx . {explicit}[x]]")
+            # basically just making a lambda wrapper around the dict
+            parsed = LambdaVal.parse(f"[λx : x∈{explicit} . {explicit}[x]]")
             self.args     = parsed.args
             self.body     = parsed.body
             self.guard    = parsed.guard
@@ -225,12 +237,16 @@ class LambdaVal(PhiVal):
             self.stype = None
         
     def __repr__(self):
+        # for explicit functions, the repr is a set of pairs
         if self.explicit:
-            # hack using the fact that body is already very close to what we want
+            # body is already very close to what we want, so just process it a bit
+            # sort to canonicalize; useful for equality comparison (inherited
+            # from phival) and hashing
             items = sorted(self.body.string.replace(": ", "⟶")[2:-4].split(", "))
             return "λ[ " + ", ".join(items) + " ]"
         #print("Lambda body " + self.sub())
         err_status = errors_on(False) #suppress errors when printing out
+        # basically, just join all the parts of the Lambda together in a pretty way
         out = "[λ" + ", ".join(map(str,self.args))
         if self.guard is not None: out += f": {self.guard.update(self.env)}"
         out += "." + self.sub() + "]" #str(eval_n(self.sub())) + "]"
@@ -270,17 +286,22 @@ class LambdaVal(PhiVal):
 
     def parse(span):
         if isinstance(span,str): span = Span.parse(span.strip())[0]
+        # make sure Lambda is wrapped in delimiters
         g = iter(span)
         delim = next(g)
         if not delim.isopendelim(): 
             raise SyntaxError("Strange delimiter for lambda " + delim)
+        # make sure Lambda starts with λ
         curr = next(g)
         if curr.string != "λ": 
             raise SyntaxError("Incorrect operator for lambda" + curr.string)
+        # get the argument to the function
         arg = next(g)
         if not arg.isvariable(): 
             raise SyntaxError(f"Incorrect variable: {arg.string} with token type {arg.type}")
         arg = arg.string
+        # figure out the type of the argument
+        # if a type is not given, assume e
         curr = next(g).string
         from .semval import SemVar
         if curr == "∈" or curr == "/":
@@ -290,6 +311,7 @@ class LambdaVal(PhiVal):
             curr = next(g).string
         else: 
             arg = SemVar(arg,ConstantVal("e"))
+        # figure out if there is a guard/condition on the argument
         guard = None
         if curr == ":":
             guard = Span()
@@ -297,12 +319,12 @@ class LambdaVal(PhiVal):
                 if curr.string == ".": curr = "."; break
                 guard.append(curr)
         elif curr != ".": raise SyntaxError("Stray item before . in lambda: " + curr)
-        
+        # get the body of the function
         body = Span()
         for curr in g:
             if curr.isdelim(): break
             body.append(curr)
-        
+        # construct a LambdaVal from arg, body, guard
         return LambdaVal((arg,), body, guard) 
         #return f'LambdaVal(("""{arg}""",),"""{str(body).lstrip()}""","""{guard}""")'
     
