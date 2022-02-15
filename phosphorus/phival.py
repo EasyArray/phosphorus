@@ -209,11 +209,26 @@ class PhiVal(object):
             return self
         
 class LambdaVal(PhiVal):
-    def __init__(self, args, body, guard=None, env={}):
-        self.args = args; self.body = body; self.guard = guard; self.env = env
-        self.stype = None
+    def __init__(self, args, body, guard=None, env={}, explicit=None):
+        self.explicit = False
+        if explicit is not None:
+            explicit = dict(explicit) # turns list of pairs into dict if needed
+            parsed = LambdaVal.parse(f"[λx . {explicit}[x]]")
+            self.args     = parsed.args
+            self.body     = parsed.body
+            self.guard    = parsed.guard
+            self.env      = parsed.env
+            self.stype    = parsed.stype
+            self.explicit = True
+        else:
+            self.args = args; self.body = body; self.guard = guard; self.env = env
+            self.stype = None
         
     def __repr__(self):
+        if self.explicit:
+            # hack using the fact that body is already very close to what we want
+            items = sorted(self.body.string.replace(": ", "⟶")[2:-4].split(", "))
+            return "λ[ " + ", ".join(items) + " ]"
         #print("Lambda body " + self.sub())
         err_status = errors_on(False) #suppress errors when printing out
         out = "[λ" + ", ".join(map(str,self.args))
@@ -249,6 +264,9 @@ class LambdaVal(PhiVal):
         out = s.ev_n()     
         # TODO: catch ValueErrors about domain internally, but still return spans for others?
         return out
+    
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def parse(span):
         if isinstance(span,str): span = Span.parse(span.strip())[0]
