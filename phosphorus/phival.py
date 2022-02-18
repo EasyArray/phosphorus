@@ -1,4 +1,5 @@
 """ Defines various kinds of PhiVals for storing Phosphorus Values """
+from locale import currency
 from graphviz import Graph
 from numbers import Number
 import builtins; import ast
@@ -225,7 +226,7 @@ class LambdaVal(PhiVal):
         if explicit is not None:
             explicit = dict(explicit) # turns list of pairs into dict if needed
             # basically just making a lambda wrapper around the dict
-            parsed = LambdaVal.parse(f"[λx : x∈{explicit} . {explicit}[x]]")
+            parsed = LambdaVal.parse(f"[λx . {explicit}[x]]")
             self.args     = parsed.args
             self.body     = parsed.body
             self.guard    = parsed.guard
@@ -239,11 +240,30 @@ class LambdaVal(PhiVal):
     def __repr__(self):
         # for explicit functions, the repr is a set of pairs
         if self.explicit:
-            # body is already very close to what we want, so just process it a bit
-            # sort to canonicalize; useful for equality comparison (inherited
-            # from phival) and hashing
-            items = sorted(self.body.string.replace(": ", "⟶")[2:-4].split(", "))
-            return "λ[ " + ", ".join(items) + " ]"
+            pairs = []
+            currPair = ["",""]
+            currInd = 0
+            # loop through the span and collect pairs
+            for i in range(len(self.body[0])):
+                c = self.body[0][i].string
+                if c == ":":
+                    # switch to second part of currPair
+                    currInd = 1
+                elif c == "," and currInd == 1:
+                    # finish currPair and start new pair
+                    pairs.append(currPair)
+                    currInd = 0
+                    currPair = ["",""]
+                else:
+                    currPair[currInd] += c
+            # add last pair
+            pairs.append(currPair)
+            # clean up opening and closing delimiters
+            pairs[0][0] = pairs[0][0][1:]
+            pairs[-1][1] = pairs[-1][1][:-1]
+            # sort for good canonical hash
+            pairs = sorted(pairs)
+            return "[λ " + ", ".join(map(lambda p : p[0] + "⟶" + p[1], pairs)) + " ]"
         #print("Lambda body " + self.sub())
         err_status = errors_on(False) #suppress errors when printing out
         # basically, just join all the parts of the Lambda together in a pretty way
