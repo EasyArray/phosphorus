@@ -66,8 +66,8 @@ def interpret(x, showparse=None, memoize=True, **kwargs):
         # when memo is used, the parsing is never shown. So,
         # when parsing should be shown, memo is reset so that
         # everything gets computed by hand
-        if showparse and memoize != False:
-            memoize = dict()
+        if showparse and memoize:
+            memo = dict()
 
     # try/finally so that parseon state will always be reset at the end
     try:
@@ -120,7 +120,7 @@ def ensurelist(x):
     """
     return x if isinstance(x, (frozenset, set, list, tuple)) else [x]
 
-def step(x, n=1, accum=True, showrules=False, **kwargs):
+def step(x, n=1, accum=False, showrules=False, **kwargs):
     """ Similar to interpret, but for basic formal systems like MIU.
         Finds all outputs after applying rules to x at most n times.
         If accum == False: only finds outputs after exactly n rule applications
@@ -143,6 +143,8 @@ def step(x, n=1, accum=True, showrules=False, **kwargs):
 
         if showrules:
             from IPython.display import display_html
+            if n == 1:
+                display_html(f"<span style='width:100%; border-bottom-style:solid; border-bottom-width:thin; display:inline-block; font-weight:bold;'>Applying All Rules</span>", raw=True)
             if n > 1:
                 display_html(f"<span style='width:100%; border-bottom-style:solid; border-bottom-width:thin; display:inline-block; font-weight:bold;'>Step {i + 1}</span>", raw=True)
             for y,r in newresults:
@@ -179,26 +181,6 @@ def repeat(f,x,n,accum=False):
     for _ in range(n):
         x = ensurelist(x) + ensurelist(f(x)) if accum else f(x)
     return x
-
-def nstep(x, n=1, accum=True): 
-    """ DEPRECATED - step (above) is now able to apply rules many times,
-                     and should be used instead of nstep
-
-        Recursively applies all applicable rules to x, then the results
-        of those applications, and so on.
-        If accum == True:  returns a list of all results of all applications
-        If accum == False: returns a list of results of the final round of
-                           applications.
-    """
-    if not isinstance(x, (frozenset,set,list,tuple)):
-        x = [x]
-    x = list(x) #regularize
-    y = [a for b in x for a in interpret(b,multiple=True)]
-    if n > 1:
-        y = [a for a in step(y,n-1,accum)]
-    if accum:
-        y = x + y
-    return list(dict.fromkeys(y))
 
 class PhiVal(object):
     """ Base class for phosphorus objects """
