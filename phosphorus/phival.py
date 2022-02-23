@@ -263,7 +263,7 @@ class LambdaVal(PhiVal):
             pairs[-1][1] = pairs[-1][1][:-1]
             # sort for good canonical hash
             pairs = sorted(pairs)
-            return "[λ " + ", ".join(map(lambda p : p[0] + "⟶" + p[1], pairs)) + " ]"
+            return "λ[" + ", ".join(map(lambda p : p[0] + "⟶" + p[1], pairs)) + " ]"
         #print("Lambda body " + self.sub())
         err_status = errors_on(False) #suppress errors when printing out
         # basically, just join all the parts of the Lambda together in a pretty way
