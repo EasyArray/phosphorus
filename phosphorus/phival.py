@@ -719,7 +719,7 @@ def noerr(f,*x,**k):
     """Converts exceptions to False, except NotImplemented"""
     try: return istrue(f(*x, **k))
     except NotImplementedError as e: raise e # Spans and SemLiterals
-    except ValueError as e: raise e # Domain Errors TODO: CHECK THIS IS OUT WITH HW4?
+    #except ValueError as e: raise e # Domain Errors TODO: CHECK THIS IS OUT WITH HW4?
     except: return False
 
 def ext(f,domain=map(ConstantVal,SemType.D["e"])):
