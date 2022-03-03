@@ -242,7 +242,11 @@ class ValWrapper(ast.NodeTransformer):
             return node #ignore tests
         return self.wrap(node) 
 
-    visit_Str = visit_Constant
+    def visit_Str(self, node):
+        print(f"Visiting {ast.dump(node)}, s:{node.s}")
+        if isinstance(node.s, str) and node.s.startswith('TEST'):
+            return node #ignore tests
+        return self.wrap(node) 
     
     def visit_Tuple(self, node):
         #print("visiting tuple", ast.dump(node))
