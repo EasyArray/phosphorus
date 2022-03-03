@@ -199,6 +199,7 @@ def replace_elements(lines):
         for pattern,repl in subs:
             line = re.sub(pattern,repl,line)
         if line.lstrip().startswith('%'): new_lines.append(line)  #ignore jupyter magic command lines
+        elif line.lstrip().startswith('"""'): new_lines.append(line)  #ignore toplevel docstrings
         else:
             new_lines.append(replace(line))
     debug_transform_print("Transformed to:", new_lines)
@@ -234,6 +235,14 @@ class ValWrapper(ast.NodeTransformer):
             #print(f"Found {node.func.id}")
             return self.generic_visit(node)
         return self.wrap(node)
+    
+    def visit_Constant(self, node):
+        #print(f"Visiting {ast.dump(node)}, value:{node.value}")
+        if isinstance(node.value, str) and node.value.startswith('TEST'):
+            return node #ignore tests
+        return self.wrap(node) 
+
+    visit_Str = visit_Constant
     
     def visit_Tuple(self, node):
         #print("visiting tuple", ast.dump(node))
