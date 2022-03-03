@@ -237,7 +237,7 @@ class ValWrapper(ast.NodeTransformer):
         return self.wrap(node)
     
     def visit_Constant(self, node):
-        #print(f"Visiting {ast.dump(node)}, value:{node.value}")
+        print(f"Visiting {ast.dump(node)}, value:{node.value}")
         if isinstance(node.value, str) and node.value.startswith('TEST'):
             return node #ignore tests
         return self.wrap(node) 
