@@ -726,10 +726,16 @@ def noerr(f,*x,**k):
     #except ValueError as e: raise e # Domain Errors TODO: CHECK THIS IS OUT WITH HW4?
     except: return False
 
-def ext(f,domain=map(ConstantVal,SemType.D["e"])):
+def ext(f,domain=map(ConstantVal,SemType.D["e"]),memoize=True):
+    if memoize:
+        hash = f"PHIEXTHASH#{f}#{domain}"
+        if hash in memo: return memo[hash]
+
     try:
         # False and error inputs are excluded from the extension
-        return SetVal([x for x in domain if noerr(f,x)])
+        out = SetVal([x for x in domain if noerr(f,x)])
+        if memoize: memo[hash] = out
+        return out
     except Exception as e:
         #raise e
         return Span.parse(f"ext({f})")
