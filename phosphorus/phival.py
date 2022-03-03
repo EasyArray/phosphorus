@@ -51,7 +51,7 @@ def φ(*args, literal=False, **kwargs):
 #TODO: fix all the showparse, memoize stuff
 parseon = False
 memo = {}
-def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
+def interpret(x, showparse=None, multiple=False, memoize=True, raise_errors=False, **kwargs):
     """ interprets an item using the rules """
     global parseon, memo
     def mylog(s): log(s,"interpret")
@@ -103,6 +103,10 @@ def interpret(x, showparse=None, multiple=False, memoize=True, **kwargs):
             except: res = out[0]
             display_html(f"<span style='float:right; font-family:monospace'>(by {rs[0]})</span>"
                          f"<span style='margin-left: 40px'>⟦{x},{kwargs}⟧ = {res}</span>", raw=True)
+    except ValueError as e:
+        if raise_errors: raise e
+        print(f"ERROR: {e}")
+        out = [None]
     finally:
         if showparse is not None: 
             parseon = oldparse
