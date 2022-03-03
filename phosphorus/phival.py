@@ -745,6 +745,11 @@ def ι(f, domain=None):
     
     from .semval import SemLiteral
     out = SemLiteral(f"ι({f})")
+
+    # Doesn't work, since it isn't parseable yet:
+    # if isinstance(f, LambdaVal):
+    #     out = SemLiteral(f"[ι{f.args[0]}.{f.body}]")    
+    
     out.stype = ConstantVal("e")
     return out
 
