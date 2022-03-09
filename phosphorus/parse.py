@@ -129,6 +129,8 @@ class Span(list):
                     if isinstance(peek, Span) and peek[0].string == "(":
                         peek = peek.update(subs) #apply bindings to args of lambda
                         item = item.sub({item.args[0] : peek.ev(False, False)}) #Basically run the func without checking types/domain restrictions
+                        if not hasdelimiters(str(item)):
+                            item = "(" + item + ")"
                         next(enum) #skip the arg
 
                 mylog("Finally" + str(item))
@@ -287,6 +289,24 @@ def totokens(s):
             except TokenError as e: pass #Ignore unclosed delimiters
         prevend = tokeninfo.end
     
+def hasdelimiters(s):
+    """ Determine whether a string is wrapped in delimiters
+        s is a string
+    """
+    if not (s[0] in Token.delims and s[-1] == Token.delims[s[0]]):
+        return False
+    stack = [s[0]]
+    curr = 0
+    while stack:
+        curr += 1
+        if curr == len(s):
+            raise SyntaxError(f"Unmatched delimiter: {stack[-1]} in {s}.")
+        if s[curr] in Token.delims:
+            stack.append(s[curr])
+        elif s[curr] == Token.delims[stack[-1]]:
+            stack.pop(-1)
+    return curr + 1 == len(s)
+
 _debugging_contexts = dict()
 def debugging(context="", on = True):
     global _debugging_contexts
