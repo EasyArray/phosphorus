@@ -129,7 +129,13 @@ class Span(list):
                     if isinstance(peek, Span) and peek[0].string == "(":
                         peek = peek.update(subs) #apply bindings to args of lambda
                         item = item.sub({item.args[0] : peek.ev(False, False)}) #Basically run the func without checking types/domain restrictions
-                        if not hasdelimiters(str(item)):
+                        outerParens = ( # check for surrounding delimiters in self
+                            self[n - 1].string in Token.delims and
+                            len(self) > n + 2 and
+                            self[n + 2].string == Token.delims[self[n - 1].string]
+                        )
+                        if not (outerParens or hasdelimiters(item)):
+                            # add surrounding parens if needed
                             item = "(" + item + ")"
                         next(enum) #skip the arg
 
