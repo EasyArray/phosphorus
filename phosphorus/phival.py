@@ -367,7 +367,7 @@ class SetVal(frozenset,PhiVal):
 
     def __repr__(self):
         if not len(self): return '∅'
-        return repr(set(self))
+        return "{" + ", ".join(sorted(map(str, self))) + "}"
     
     def __add__(self,other):
         asdict = dict(self)
