@@ -422,6 +422,12 @@ class SpanVal(PhiVal): #Todo inherit from span? Messes up printing?
     
     def update(self,b):
         return self.span.update(b)
+
+    def ev(self, print_errors=True, throw_errors=False):
+        return self.span.ev(self, print_errors, throw_errors)
+
+    def ev_n(self, count=100, print_errors = True, throw_errors = False):
+        return self.span.ev_n(self, count, print_errors, throw_errors)
     
 class TreeVal(tuple, PhiVal):
     def __new__(cls, *children):
