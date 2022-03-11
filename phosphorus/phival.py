@@ -48,12 +48,13 @@ def φ(*args, literal=False, **kwargs):
 
     return input
 
+# global state variable for whether parsing should be shown
 parseon = False
 # memo is a dictionary mapping inputs to [dictionaries that map bindings
 # to the corresponding output and rule used to achieve that output]
 # That is, memo: [input -> [binding -> (output, rule used)]]
 memo = dict()
-def interpret(x, showparse=None, memoize=True, **kwargs):
+def interpret(x, showparse=None, memoize=True, raise_errors=False, **kwargs):
     global parseon, memo
     # tuple of bindings coming from kwargs, used for memoization
     bindings = tuple(kwargs.items())
@@ -100,6 +101,12 @@ def interpret(x, showparse=None, memoize=True, **kwargs):
             except: res = out
             display_html(f"<span style='float:right; font-family:monospace'>(by {r})</span>"
                          f"<span style='margin-left: 40px'>⟦{x},{kwargs}⟧ = {res}</span>", raw=True)
+    
+    # don't raise ValueErrors if raise_errors is turned off
+    except ValueError as e:
+        if raise_errors: raise e
+        print(f"ERROR: {e}")
+        out = [None]
     finally:
         # set state of parseon back to what it was before this call
         if showparse is not None:
@@ -220,9 +227,9 @@ class PhiVal(object):
         stype = SemType.type(self)
         if stype:
             stype = repr(stype).replace(' ', '')
-            out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e7ffe5'>"
+            out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e7ffe5; color:black;'>"
                     f"∈{stype}</span>")
-        out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e5e5ff'>"
+        out += ("<span style='float:right; font-family:monospace; font-weight:bold; background-color:#e5e5ff; color:black;'>"
                 f"{self.type()}</span>")
         return out
             
@@ -405,7 +412,7 @@ class SetVal(frozenset,PhiVal):
 
     def __repr__(self):
         if not len(self): return '∅'
-        return repr(set(self))
+        return "{" + ", ".join(sorted(map(str, self))) + "}"
     
     def __add__(self,other):
         asdict = dict(self)
@@ -460,6 +467,12 @@ class SpanVal(PhiVal): #Todo inherit from span? Messes up printing?
     
     def update(self,b):
         return self.span.update(b)
+
+    def ev(self, print_errors=True, throw_errors=False):
+        return self.span.ev(self, print_errors, throw_errors)
+
+    def ev_n(self, count=100, print_errors = True, throw_errors = False):
+        return self.span.ev_n(self, count, print_errors, throw_errors)
     
 class TreeVal(tuple, PhiVal):
     def __new__(cls, *children):
@@ -761,13 +774,19 @@ def noerr(f,*x,**k):
     """Converts exceptions to False, except NotImplemented"""
     try: return istrue(f(*x, **k))
     except NotImplementedError as e: raise e # Spans and SemLiterals
-    except ValueError as e: raise e # Domain Errors TODO: CHECK THIS IS OUT WITH HW4?
+    #except ValueError as e: raise e # Domain Errors TODO: CHECK THIS IS OUT WITH HW4?
     except: return False
 
-def ext(f,domain=map(ConstantVal,SemType.D["e"])):
+def ext(f,domain=map(ConstantVal,SemType.D["e"]),memoize=True):
+    if memoize:
+        hash = f"PHIEXTHASH#{f}#{domain}"
+        if hash in memo: return memo[hash]
+
     try:
         # False and error inputs are excluded from the extension
-        return SetVal([x for x in domain if noerr(f,x)])
+        out = SetVal([x for x in domain if noerr(f,x)])
+        if memoize: memo[hash] = out
+        return out
     except Exception as e:
         #raise e
         return Span.parse(f"ext({f})")
@@ -787,6 +806,11 @@ def ι(f, domain=None):
     
     from .semval import SemLiteral
     out = SemLiteral(f"ι({f})")
+
+    # Doesn't work, since it isn't parseable yet:
+    # if isinstance(f, LambdaVal):
+    #     out = SemLiteral(f"[ι{f.args[0]}.{f.body}]")    
+    
     out.stype = ConstantVal("e")
     return out
 

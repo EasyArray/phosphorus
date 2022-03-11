@@ -21,12 +21,41 @@ class SemLiteral(ConstantVal):
         
         return ConstantVal("t")
     
-    def __and__(self,other): return opcode(self, "∧", other)
-    def __rand__(self,other): return opcode(other, "∧", self)
-    def __or__(self,other): return opcode(self, "∨", other)
-    def __ror__(self,other): return opcode(other, "∨", self)
+    def __and__(self,other): 
+        try:
+            # If the other item is truly true, return self,
+            # if truly false, return 0 
+            return self if other else 0
+        except:
+            # if neither true/false, return the original code
+            return opcode(self, "∧", other)
+
+    def __rand__(self,other): 
+        # Same as above, but opposite order
+        try: 
+            return self if other else 0
+        except: 
+            return opcode(other, "∧", self)
+
+    def __or__(self,other):
+        # For or it's 1 if the other is true
+        try:
+            return 1 if other else self
+        except:
+            return opcode(self, "∨", other)
+
+    def __ror__(self,other): 
+        # Other order
+        try:
+            return 1 if other else self
+        except:
+            return opcode(other, "∨", self)
+
     def __invert__(self): return SpanVal("¬" + self)
 
+    # Since SemLiterals do not have a known value, we don't want them
+    # short-circuiting boolean "and" and "or" in python. 
+    # We use & and | instead
     def __bool__(self): raise NotImplementedError
     
 class SemPred(ConstantVal):
