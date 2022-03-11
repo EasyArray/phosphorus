@@ -118,12 +118,11 @@ class Span(list):
                             len(self) > n + 1 and
                             self[n + 1].string == Token.delims[self[n - 1].string]
                     )
-                    onlyItem = len(self) == 2 and n == 0 # check if lambda call is the only thing in self
-                    singleItem = len(item) == 1 # if item is something like 'x', it doesn't need parens
-                    if not (outerParens or onlyItem or singleItem or hasdelimiters(s)):
+                    onlyItem = len(self) == 2 and n == 0 # check if result of substitution is the only thing in self
+                    # if len == 1, then there is only one token in item, so parens aren't needed
+                    if not (outerParens or onlyItem or len(item) == 1):
                         # add surrounding parens if needed
-                        s = "(" + s + ")"
-                    item = Span.parse(spaces + s)
+                        item = Span.parse(spaces + "(" + s + ")")
                     mylog(f"Parsed: |{item}|")
                     if item.printlen() == 1: item = item[0]
             
@@ -147,8 +146,8 @@ class Span(list):
                             self[n + 2].string == Token.delims[self[n - 1].string]
                         )
                         onlyItem = len(self) == 2 and n == 0 # check if lambda call is the only thing in self
-                        singleItem = len(Span.parse(item)) == 1 # if item is something like 'x', it doesn't need parens
-                        if not (outerParens or onlyItem or singleItem or hasdelimiters(item)):
+                        # if len == 1, then there is only one token in item, so parens aren't needed
+                        if not (outerParens or onlyItem or len(Span.parse(item)) == 1):
                             # add surrounding parens if needed
                             item = "(" + item + ")"
                         next(enum) #skip the arg
@@ -308,23 +307,6 @@ def totokens(s):
             try: yield from totokens(repl)
             except TokenError as e: pass #Ignore unclosed delimiters
         prevend = tokeninfo.end
-    
-def hasdelimiters(s):
-    """ Determine whether a string is wrapped in delimiters """
-    S = s if isinstance(s, str) else str(s)
-    if not (S[0] in Token.delims and S[-1] == Token.delims[S[0]]):
-        return False
-    stack = [S[0]]
-    curr = 0
-    while stack:
-        curr += 1
-        if curr == len(S):
-            raise SyntaxError(f"Unmatched delimiter: {stack[-1]} in {S}.")
-        if S[curr] in Token.delims:
-            stack.append(S[curr])
-        elif S[curr] == Token.delims[stack[-1]]:
-            stack.pop(-1)
-    return curr + 1 == len(S)
 
 _debugging_contexts = dict()
 def debugging(context="", on = True):
