@@ -296,22 +296,21 @@ def totokens(s):
         prevend = tokeninfo.end
     
 def hasdelimiters(s):
-    """ Determine whether a string is wrapped in delimiters
-        s is a string
-    """
-    if not (s[0] in Token.delims and s[-1] == Token.delims[s[0]]):
+    """ Determine whether a string is wrapped in delimiters """
+    S = s if isinstance(s, str) else str(s)
+    if not (S[0] in Token.delims and S[-1] == Token.delims[S[0]]):
         return False
-    stack = [s[0]]
+    stack = [S[0]]
     curr = 0
     while stack:
         curr += 1
-        if curr == len(s):
-            raise SyntaxError(f"Unmatched delimiter: {stack[-1]} in {s}.")
-        if s[curr] in Token.delims:
-            stack.append(s[curr])
-        elif s[curr] == Token.delims[stack[-1]]:
+        if curr == len(S):
+            raise SyntaxError(f"Unmatched delimiter: {stack[-1]} in {S}.")
+        if S[curr] in Token.delims:
+            stack.append(S[curr])
+        elif S[curr] == Token.delims[stack[-1]]:
             stack.pop(-1)
-    return curr + 1 == len(s)
+    return curr + 1 == len(S)
 
 _debugging_contexts = dict()
 def debugging(context="", on = True):
