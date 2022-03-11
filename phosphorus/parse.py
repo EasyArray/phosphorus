@@ -112,6 +112,18 @@ class Span(list):
                     s = str(item) #Problem if we want to use keywords as ConstantVals?
                     mylog(f"|{item}| transforms to |{s}|")
                     item = Span.parse(spaces + s)
+                    # logic for add parens if necessary
+                    outerParens = ( # check for surrounding delimiters in self
+                            self[n - 1].string in Token.delims and
+                            len(self) > n + 1 and
+                            self[n + 1].string == Token.delims[self[n - 1].string]
+                    )
+                    onlyItem = len(self) == 2 and n == 0 # check if lambda call is the only thing in self
+                    singleItem = len(item) == 1 # if item is something like 'x', it doesn't need parens
+                    if not (outerParens or onlyItem or singleItem or hasdelimiters(s)):
+                        # add surrounding parens if needed
+                        s = "(" + s + ")"
+                    item = Span.parse(spaces + s)
                     mylog(f"Parsed: |{item}|")
                     if item.printlen() == 1: item = item[0]
             
@@ -134,7 +146,9 @@ class Span(list):
                             len(self) > n + 2 and
                             self[n + 2].string == Token.delims[self[n - 1].string]
                         )
-                        if not (outerParens or hasdelimiters(item)):
+                        onlyItem = len(self) == 2 and n == 0 # check if lambda call is the only thing in self
+                        singleItem = len(Span.parse(item)) == 1 # if item is something like 'x', it doesn't need parens
+                        if not (outerParens or onlyItem or singleItem or hasdelimiters(item)):
                             # add surrounding parens if needed
                             item = "(" + item + ")"
                         next(enum) #skip the arg
