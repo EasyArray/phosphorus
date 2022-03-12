@@ -442,6 +442,7 @@ class TreeVal(tuple, PhiVal):
         except: pass
         instance = super().__new__(cls, children)
         instance.name = ConstantVal(name)
+        instance.svg = None
         return instance
         
     def parts(self): return iter([self.name, *self])
@@ -474,6 +475,8 @@ class TreeVal(tuple, PhiVal):
 #         return f"TreeVal({name}{children})"
     
     def _repr_svg_(self):
+        if self.svg: return self.svg
+
         out = Graph()
         graph_attr = {
             "fontsize": "12", "label": "", "labelloc": "t", "splines": "line",
@@ -505,7 +508,8 @@ class TreeVal(tuple, PhiVal):
             if tree: map(lambda n: add_node(n, node), node)
         
         add_node(self)
-        return out._repr_svg_()
+        self.svg = out._repr_svg_()
+        return self.svg
     
     __repr__ = _repr_svg_ #TODO find out why this is necessary
     
@@ -565,6 +569,7 @@ class SemType(TupleVal):
     
     metamarkers = "_ʼ"
     
+    # TODO: memoize or otherwise streamline
     def type(x):
         for t in SemType.D:
             if x in SemType.D[t]: return ConstantVal(t)
@@ -615,17 +620,20 @@ class Rule(object):
         Rule.register(self)
     
     def run(self,target,**kwargs):
+        def mylog(s): log(s,"Rule.run")
+
         bindings = self.pattern.match(target)
         if bindings is None: return None
-        #print(f"Running Rule {self.name} with Bindings: {bindings}")#; time.sleep(1)
+        #mylog(f"Running Rule {self.name} with Bindings: {bindings}")#; time.sleep(1)
         
         if isinstance(bindings, list):
+            mylog(f"Rule {self} received a list of binding (lists)")
             out = [self.output.update(bs) for bs in bindings]
             #out = out[0] if len(out) == 1 else out
             return out if out else None
                     
-        #print("Running Sem Rule", self, "on", str(target), "Bindings:")
-        #for k in bindings: print(k, ": ", str(bindings[k]))
+        mylog(f"Running Sem Rule {self} on {target}, Bindings:")
+        for k in bindings: mylog(f"{k} : {bindings[k]}")
         
         bindings.update(kwargs) #add the parameters to the bindings
         out = self.output.update(bindings)
@@ -640,7 +648,7 @@ class Rule(object):
         #except AttributeError: pass
         except: return None
                 
-        #print(f"{self.name} -> {out}::{type(out)}")
+        mylog(f"{self.name} -> {out}::{type(out)}")
         return out
     
     def register(self):
@@ -780,7 +788,7 @@ class ArbSet():
     def __repr__(self):
         return self.s
         
-    
+# TODO: memoize so we can memoize its __contains__ above    
 def dom(f):
     def test(x):
         try:

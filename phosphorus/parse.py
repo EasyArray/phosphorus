@@ -90,7 +90,7 @@ class Span(list):
         def mylog(s): log(s,"Span.update")
         from .phival import LambdaVal, ConstantVal
         
-        mylog(f"Updating {self.debugstr()} with subs {subs}")
+        mylog(f"Updating {self.debugstr()} with subs {dictstr(subs)}")
         
         span = Span()
         span.type = self.type
@@ -313,3 +313,16 @@ def printerr(e, s=""):
         return
     print(type(e).__name__, s, ":", e)
     #traceback.print_exc()
+
+def dictstr(d):
+    """
+    Converts a dict to a string using default str/repr for f strings
+    Important because repr of a TreeVal can be very expensive, and
+    the default for printing a dict uses repr instead of str
+    """
+    if d is None: return None
+    out = "{"
+    for k in d: 
+        out += f"{k} : {d[k]} ,\n"
+    out += "}"
+    return out
