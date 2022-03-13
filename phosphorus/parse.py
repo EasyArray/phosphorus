@@ -112,6 +112,17 @@ class Span(list):
                     s = str(item) #Problem if we want to use keywords as ConstantVals?
                     mylog(f"|{item}| transforms to |{s}|")
                     item = Span.parse(spaces + s)
+                    # logic for add parens if necessary
+                    outerParens = ( # check for surrounding delimiters in self
+                            self[n - 1].string in Token.delims and
+                            len(self) > n + 1 and
+                            self[n + 1].string == Token.delims[self[n - 1].string]
+                    )
+                    onlyItem = len(self) == 2 and n == 0 # check if result of substitution is the only thing in self
+                    # if len == 1, then there is only one token in item, so parens aren't needed
+                    if not (outerParens or onlyItem or len(item) == 1):
+                        # add surrounding parens if needed
+                        item = Span.parse(spaces + "(" + s + ")")
                     mylog(f"Parsed: |{item}|")
                     if item.printlen() == 1: item = item[0]
             
@@ -129,6 +140,16 @@ class Span(list):
                     if isinstance(peek, Span) and peek[0].string == "(":
                         peek = peek.update(subs) #apply bindings to args of lambda
                         item = item.sub({item.args[0] : peek.ev(False, False)}) #Basically run the func without checking types/domain restrictions
+                        outerParens = ( # check for surrounding delimiters in self
+                            self[n - 1].string in Token.delims and
+                            len(self) > n + 2 and
+                            self[n + 2].string == Token.delims[self[n - 1].string]
+                        )
+                        onlyItem = len(self) == 2 and n == 0 # check if lambda call is the only thing in self
+                        # if len == 1, then there is only one token in item, so parens aren't needed
+                        if not (outerParens or onlyItem or len(Span.parse(item)) == 1):
+                            # add surrounding parens if needed
+                            item = "(" + item + ")"
                         next(enum) #skip the arg
 
                 mylog("Finally" + str(item))
@@ -286,7 +307,7 @@ def totokens(s):
             try: yield from totokens(repl)
             except TokenError as e: pass #Ignore unclosed delimiters
         prevend = tokeninfo.end
-    
+
 _debugging_contexts = dict()
 def debugging(context="", on = True):
     global _debugging_contexts
