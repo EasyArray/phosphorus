@@ -48,101 +48,146 @@ def φ(*args, literal=False, **kwargs):
 
     return input
 
-#TODO: fix all the showparse, memoize stuff
+# global state variable for whether parsing should be shown
 parseon = False
-memo = {}
-def interpret(x, showparse=None, multiple=False, memoize=True, raise_errors=False, **kwargs):
-    """ interprets an item using the rules """
+# memo is a dictionary mapping inputs to [dictionaries that map bindings
+# to the corresponding output and rule used to achieve that output]
+# That is, memo: [input -> [binding -> (output, rule used)]]
+memo = dict()
+def interpret(x, showparse=None, memoize=True, raise_errors=False, **kwargs):
     global parseon, memo
-    def mylog(s): log(s,"interpret")
-    
-#    if kwargs:
-#        #ip.push(kwargs)
-#        memoize = "Reset"
-    
+    # tuple of bindings coming from kwargs, used for memoization
+    bindings = tuple(kwargs.items())
+
+    # set state of parseon to showparse so that any recursive
+    # calls that happen inherit the value of showparse
     if showparse is not None:
         oldparse = parseon
         parseon = showparse
-        if showparse and memoize != False: memoize="Reset"
-        mylog("Setting parseon to" + str(showparse))
-        
-    mylog(f"memoize is {memoize}")
-    if memoize == "Reset":
-        memo = {}
-    
-    if parseon: mylog("Beginning parse of" + str(x))
-    
+        # when memo is used, the parsing is never shown. So,
+        # when parsing should be shown, memo is reset so that
+        # everything gets computed by hand
+        if showparse and memoize:
+            memo = dict()
+
+    # try/finally so that parseon state will always be reset at the end
     try:
-        from_memory = False
-        if memoize != False and x in memo:
-            out, rs, kw = memo[x]
-            if kw == kwargs: from_memory = True
-            mylog(str(x) + "From memory!")
-            
-        if not from_memory:
-            mylog(f"Interpreting {x}")#; time.sleep(1)
-            out1 = [(r,rules[r].run(x, **kwargs)) for r in rules]
-            mylog({f"{r}->{o}" : type(o) for (r,o) in out1})
-
-            rs = [r for (r,o) in out1 if o is not None]
-            #out = [o for n,o in enumerate(out) if o is not None if o not in out[:n]]
-            out = [o for (_,o) in out1 if o is not None]
-            if not out:
-                raise ValueError(str(x) + " is not interpretable")
+        out = None # will be the output of a rule applied to x
+        r   = None # will be the rule applied to x
         
-        if multiple: 
-            out = [o for l in out for o in l]
-            return out
+        # try to use memoization to avoid recomputing
+        if memoize and x in memo and bindings in memo[x]:
+            out, r = memo[x][bindings]
+        # if the previous if clause didn't happen, we need to compute the interpretation
+        else:
+            # get all results of applying rules to x
+            results   = [(r, rules[r].run(x, **kwargs)) for r in rules]
+            outputs   = [o for (_,o) in results if o is not None]
+            rulesused = [r for (r,o) in results if o is not None]
 
-        if len(out) > 1 and not isinstance(out, Span):
-            raise ValueError(f"{len(out)} interpretations for {x}: {out}")
+            # if there are no interpretations, raise an error
+            if not outputs:
+                raise ValueError(f"{str(x)} is not interpretable")
+            # if there is more than one interpretation, raise an error
+            elif len(outputs) > 1 and not isinstance(outputs, Span):
+                raise ValueError(f"{str(x)} has multiple interpretations")
 
+            out, r = outputs[0], rulesused[0]
+        
+        # show parsing if output was actually computed
         if parseon and not (memoize and x in memo):
             from IPython.display import display_html
-            try: res = out[0]._repr_html_()
-            except: res = out[0]
-            display_html(f"<span style='float:right; font-family:monospace'>(by {rs[0]})</span>"
+            try: res = out._repr_html_()
+            except: res = out
+            display_html(f"<span style='float:right; font-family:monospace'>(by {r})</span>"
                          f"<span style='margin-left: 40px'>⟦{x},{kwargs}⟧ = {res}</span>", raw=True)
+    
+    # don't raise ValueErrors if raise_errors is turned off
     except ValueError as e:
         if raise_errors: raise e
         print(f"ERROR: {e}")
         out = [None]
     finally:
-        if showparse is not None: 
+        # set state of parseon back to what it was before this call
+        if showparse is not None:
             parseon = oldparse
-            mylog("Resetting parseon to" + str(oldparse))
-            
-    if memoize != False: memo[x] = (out,rs,kwargs)
-    return out[0]
+    
+    # save values for future
+    if memoize:
+        if x in memo:
+            memo[x][bindings] = (out, r)
+        else:
+            memo[x] = {bindings: (out, r)}
+    
+    return out
 
 def ensurelist(x):
-    if not isinstance(x, (frozenset,set,list,tuple)):
-        x = [x]
-    return x
+    """ If x is not already a list or set, returns a list containing only x.
+        If x is already a list or set, returns x.
+    """
+    return x if isinstance(x, (frozenset, set, list, tuple)) else [x]
+
+def step(x, n=1, accum=False, showrules=False, **kwargs):
+    """ Similar to interpret, but for basic formal systems like MIU.
+        Finds all outputs after applying rules to x at most n times.
+        If accum == False: only finds outputs after exactly n rule applications
+        If showrules == True: prints out the rules being applid and the
+                              resulting outputs at each step.
+    """
+    # outputs is a list of sets
+    # outputs[i] is the set of outputs after n steps
+    outputs = []
+    outputs.append(set(ensurelist(x))) # after 0 steps, x is the only output
+
+    for i in range(n):
+        # for output printing, keep a dict of (input, rule) -> rule applied to input
+        # inputs come from outputs of the previous step
+        newresults = dict()
+        for y in outputs[-1]:
+            for r in rules:
+                newresults[(y,r)] = rules[r].run(y, **kwargs)
+        newresults = dict(filter(lambda pair: pair[1] is not None, newresults.items()))
+
+        if showrules:
+            from IPython.display import display_html
+            if n == 1:
+                display_html(f"<span style='width:100%; border-bottom-style:solid; border-bottom-width:thin; display:inline-block; font-weight:bold;'>Applying All Rules</span>", raw=True)
+            if n > 1:
+                display_html(f"<span style='width:100%; border-bottom-style:solid; border-bottom-width:thin; display:inline-block; font-weight:bold;'>Step {i + 1}</span>", raw=True)
+            for y,r in newresults:
+                 display_html(f"<span style='float:right; font-family:monospace'>(by {r})</span>"
+                              f"<span>{y} &rightarrow; {newresults[(y,r)]}</span>", raw=True)
+        
+        newoutputs = set()
+        for p in newresults:
+            newoutputs.update(newresults[p])
+        
+        # old steps are only needed if accumulating
+        if not accum:
+            outputs.pop(0)
+        outputs.append(newoutputs)
+
+        # display current list of results
+        """ removed this to be consistent with showparse style in interpret
+        if showrules:
+            print(f"Current values: {set.union(*outputs) if accum else outputs[-1]}")
+        """
     
-def step(x):
-    x = [a for b in ensurelist(x) for a in interpret(b,multiple=True)]
-    return list(dict.fromkeys(x))
+    # outputs is now a list of sets of outputs at each step
+    final = []
+    for S in outputs:
+        final.extend(S)
+    return final
 
 def repeat(f,x,n,accum=False):
-    while n > 0:
-        x = ensurelist(x) + f(x) if accum else f(x)
-        n -= 1
-    return x
-
-def nstep(x, n=1, accum=True): 
-    """ Version of interpret for basic formal systems like MIU. Allows
-        multiple outputs, unlike a semantic interpretation function.
+    """ Recursively applies f to x, n times.
+        If accum == False: returns the value of f(f(f(...f(x))))
+        If accum == True:  returns a list with each application:
+                           [x, f(x), f(f(x)), ..., f(f(f(...f(x))))]
     """
-    if not isinstance(x, (frozenset,set,list,tuple)):
-        x = [x]
-    x = list(x) #regularize
-    y = [a for b in x for a in interpret(b,multiple=True)]
-    if n > 1:
-        y = [a for a in step(y,n-1,accum)]
-    if accum:
-        y = x + y
-    return list(dict.fromkeys(y))
+    for _ in range(n):
+        x = ensurelist(x) + ensurelist(f(x)) if accum else f(x)
+    return x
 
 class PhiVal(object):
     """ Base class for phosphorus objects """
