@@ -616,6 +616,9 @@ class SemType(TupleVal):
     
     # TODO: memoize or otherwise streamline
     def type(x):
+        if x is None:
+            return ConstantVal('t') # small hack for uninterpretable lambda bodies
+        
         for t in SemType.D:
             if x in SemType.D[t]: return ConstantVal(t)
             
@@ -624,7 +627,7 @@ class SemType(TupleVal):
             
         if isinstance(x,Span):
             return ConstantVal('t')
-        
+      
         if hasattr(x, 'semtype'):
             return x.semtype()
         
