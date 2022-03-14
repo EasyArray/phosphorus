@@ -106,7 +106,7 @@ def interpret(x, showparse=None, memoize=True, raise_errors=False, **kwargs):
     except ValueError as e:
         if raise_errors: raise e
         print(f"ERROR: {e}")
-        out = [None]
+        out = None
     finally:
         # set state of parseon back to what it was before this call
         if showparse is not None:
