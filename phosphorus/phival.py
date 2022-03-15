@@ -556,7 +556,10 @@ class TreeVal(tuple, PhiVal):
         self.svg = out._repr_svg_()
         return self.svg
     
-    __repr__ = _repr_svg_ #TODO find out why this is necessary
+    """ Necessary because Jupyter displays items using repr, not str, and trees
+        should be displayed as svgs in the output of cells.
+    """
+    __repr__ = _repr_svg_
     
     
 class ConstantVal(str, PhiVal):
