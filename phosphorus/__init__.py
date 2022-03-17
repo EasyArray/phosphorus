@@ -8,7 +8,7 @@ ValWrapper       -- ast converter to wrap certain nodes with conversions to φ o
 from IPython.core.latex_symbols import latex_symbols
 import re, ast, itertools
 from .phival import *
-from .parse import Span, Token, STRING, NAME, printerr
+from .parse import Span, Token, STRING, NAME, printerr, log
 
 escapes={
         ('in',  '∈', ' in '), ("'", 'ʼ', "ʼ"), ("`", 'ʼ', "ʼ"),
