@@ -203,6 +203,12 @@ class PhiVal(object):
     def __rshift__(self,other):
         return [self,other]
     
+    def __matmul__(self,other):
+        """Overloads the @ matrix multiplication operator for pattern matching: 
+
+        target @ pattern returns the bindings generated (or None if there's no match)"""
+        return other.match(self)
+
     def update(self, bindings):
         #print("super update", self)
         if self in bindings: return bindings[self]
