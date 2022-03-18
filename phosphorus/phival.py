@@ -278,10 +278,28 @@ class LambdaVal(PhiVal):
         return out
     
     def __call__(self, *args, **kwargs):
+        """ kwargs are used to update the environment """
         def mylog(s): log(s,"LambdaVal.__call__")
         if kwargs:
-            [kwargs.pop(arg,"") for arg in self.args]
-            return LambdaVal(self.args, self.body, self.guard, {**self.env, **kwargs})
+            # get rid of substitutions that would change the value of a bound variable
+            map(lambda arg: kwargs.pop(arg, ""), self.args)
+            
+            # alpha-convert arguments that match a free variable in the value of a substitution
+            subVariables = {var for val in kwargs.values() for var in Span(str(val)).variables()}
+            newArgs  = self.args
+            newBody  = self.body
+            newGuard = self.guard
+            for i in range(len(newArgs)):
+                if newArgs[i] in subVariables:
+                    a = 1 # find smallest appendable positive integer to avoid clash
+                    while newArgs[i] + str(a) in subVariables:
+                        a += 1
+                    newBody  = newBody.update({newArgs[i] : newArgs[i] + str(a)})
+                    if newGuard is not None:
+                        newGuard = newGuard.update({newArgs[i] : newArgs[i] + str(a)})
+                    newArgs  = (*newArgs[:i], newArgs[i] + str(a), *newArgs[i+1:])
+            
+            return LambdaVal(newArgs, newBody, self.guard, {**self.env, **kwargs})
         
         # TODO: mesh with "sub" function below?
         bindings = {**self.env} #Copy the env dictionary

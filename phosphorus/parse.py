@@ -60,6 +60,10 @@ class Span(list):
     def semtype(self):
         from .phival import ConstantVal
         return ConstantVal("t")
+
+    def variables(self):
+        """ returns set of all variables/names that appear in self, as strings """
+        return {str(item) for item in self.leaves() if item.type == NAME}
     
     def __bool__(self): raise NotImplementedError
     
