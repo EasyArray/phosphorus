@@ -54,7 +54,7 @@ parseon = False
 # to the corresponding output and rule used to achieve that output]
 # That is, memo: [input -> [binding -> (output, rule used)]]
 memo = dict()
-def interpret(x, showparse=None, memoize=True, raise_errors=False, **kwargs):
+def interpret(x, showparse=None, memoize=True, raise_errors=False, print_errors=True, **kwargs):
     global parseon, memo
     # tuple of bindings coming from kwargs, used for memoization
     bindings = tuple(kwargs.items())
@@ -104,8 +104,8 @@ def interpret(x, showparse=None, memoize=True, raise_errors=False, **kwargs):
     
     # don't raise ValueErrors if raise_errors is turned off
     except ValueError as e:
+        if print_errors: print(f"ERROR: {e}")
         if raise_errors: raise e
-        print(f"ERROR: {e}")
         out = None
     finally:
         # set state of parseon back to what it was before this call
@@ -851,7 +851,8 @@ def dom(f):
         try:
             if τ(x) != τ(f.args[0]):
                 return False
-            f(x)
+            if f.guard:
+                f(x)
         except: return False
         return True
     
