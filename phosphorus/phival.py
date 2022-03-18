@@ -678,19 +678,21 @@ class Rule(object):
     
     def run(self,target,**kwargs):
         def mylog(s): log(s,"Rule.run")
+        DEBUGGING = mylog("ENTER Rule.run")
 
         bindings = self.pattern.match(target)
         if bindings is None: return None
-        #mylog(f"Running Rule {self.name} with Bindings: {bindings}")#; time.sleep(1)
+        # REDO with dictstr: ??
+        #DEBUGGING and mylog(f"Running Rule {self.name} with Bindings: {bindings}")#; time.sleep(1)
         
         if isinstance(bindings, list):
-            mylog(f"Rule {self} received a list of binding (lists)")
+            DEBUGGING and mylog(f"Rule {self} received a list of binding (lists)")
             out = [self.output.update(bs) for bs in bindings]
             #out = out[0] if len(out) == 1 else out
             return out if out else None
                     
-        mylog(f"Running Sem Rule {self} on {target}, Bindings:")
-        for k in bindings: mylog(f"{k} : {bindings[k]}")
+        DEBUGGING and mylog(f"Running Sem Rule {self} on {target}, Bindings:") 
+        for k in bindings: DEBUGGING and mylog(f"{k} : {bindings[k]}") #refactor with dictstr?
         
         bindings.update(kwargs) #add the parameters to the bindings
         out = self.output.update(bindings)
@@ -705,7 +707,7 @@ class Rule(object):
         #except AttributeError: pass
         except: return None
                 
-        mylog(f"{self.name} -> {out}::{type(out)}")
+        DEBUGGING and mylog(f"{self.name} -> {out}::{type(out)}")
         return out
     
     def register(self):

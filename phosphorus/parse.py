@@ -64,7 +64,7 @@ class Span(list):
     def __bool__(self): raise NotImplementedError
     
     @property
-    def string(self): return str(self)
+    def string(self): return str(self) #TODO: memoize? or __repr__()?
         
     @property
     def spacebefore(self): return self[0].spacebefore
@@ -89,8 +89,9 @@ class Span(list):
     def update(self,subs):
         def mylog(s): log(s,"Span.update")
         from .phival import LambdaVal, ConstantVal
-        
-        mylog(f"Updating {self.debugstr()} with subs {dictstr(subs)}")
+        DEBUGGING = mylog("ENTER Span.update")
+
+        DEBUGGING and mylog(f"Updating {self.debugstr()} with subs {dictstr(subs)}") #Costly
         
         span = Span()
         span.type = self.type
@@ -100,17 +101,17 @@ class Span(list):
             if len(self) > n+1:
                 peek = self[n+1]
             
-            mylog(f"Checking {item.debugstr()} in subs? {item.string in subs}")
+            DEBUGGING and mylog(f"Checking {item.debugstr()} in subs? {item.string in subs}")
             if item.type == NAME and item.string in subs and (peek.string != "=" if peek is not None else True):
                 s = item.string
                 spaces = item.spacebefore
                 #item = ConstantVal(s).update(subs)                
                 item = subs[item.string]
-                mylog(f"Replacing {s} -> {item}::{type(item)}")
+                DEBUGGING and mylog(f"Replacing {s} -> {item}::{type(item)}")
                 if not isinstance(item, LambdaVal):
                     #s = get_ipython().transform_cell(str(item)).strip() #remove final newline
                     s = str(item) #Problem if we want to use keywords as ConstantVals?
-                    mylog(f"|{item}| transforms to |{s}|")
+                    DEBUGGING and mylog(f"|{item}| transforms to |{s}|")
                     item = Span.parse(spaces + s)
                     # logic for add parens if necessary
                     outerParens = ( # check for surrounding delimiters in self
@@ -123,20 +124,20 @@ class Span(list):
                     if not (outerParens or onlyItem or len(item) == 1):
                         # add surrounding parens if needed
                         item = Span.parse(spaces + "(" + s + ")")
-                    mylog(f"Parsed: |{item}|")
+                    DEBUGGING and mylog(f"Parsed: |{item}|") #Costly
                     if item.printlen() == 1: item = item[0]
             
             if item.type == "lambda":
-                mylog("Found lambda span " + str(item))
+                DEBUGGING and mylog("Found lambda span " + str(item))
                 item = LambdaVal.parse(item)
-                mylog("Parsed " + str(item))
+                DEBUGGING and mylog("Parsed " + str(item))
                 if subs: item = item(**subs)
-                mylog("With subs " + str(item))
+                DEBUGGING and mylog("With subs " + str(item))
                 
             if isinstance(item, LambdaVal):
-                mylog("Found lambda " + str(item))
+                DEBUGGING and mylog("Found lambda " + str(item))
                 if peek is not None:
-                    mylog(f"Next item: {peek}::{type(peek)}")
+                    DEBUGGING and mylog(f"Next item: {peek}::{type(peek)}")
                     if isinstance(peek, Span) and peek[0].string == "(":
                         peek = peek.update(subs) #apply bindings to args of lambda
                         item = item.sub({item.args[0] : peek.ev(False, False)}) #Basically run the func without checking types/domain restrictions
@@ -152,17 +153,17 @@ class Span(list):
                             item = "(" + item + ")"
                         next(enum) #skip the arg
 
-                mylog("Finally" + str(item))
+                DEBUGGING and mylog("Finally" + str(item))
                 item = Span.parse(str(item))
                 #span.append(item)
                 #item = Span.parse("(" + ",".join(f"{key}={value}" for key,value in subs.items()) + ")")[0]
-                mylog("Adding " + str(item) + " to lambda")
+                DEBUGGING and mylog("Adding " + str(item) + " to lambda")
 
             elif isinstance(item,Span):
                 item = item.update(subs) #Could this do too many replacements?
             
             span.append(item)
-        mylog("Returning" + item.debugstr())
+        DEBUGGING and mylog("Returning" + item.debugstr())
         return span
 
 #NOTE: Can't for the life of me get the async runcode to work...
@@ -318,6 +319,8 @@ def debugging(context="", on = True):
 def log(s,context=""):
     if _debugging_contexts.get("") or _debugging_contexts.get(context):
         print(s)
+        return True
+    return False
         
 _errors_on = True
 def errors_on(b, context=""):
