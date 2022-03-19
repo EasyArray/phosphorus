@@ -853,7 +853,7 @@ def dom(f):
         try:
             if τ(x) != τ(f.args[0]):
                 return False
-            if f.guard:
+            if f.guard is not None and len(f.guard) > 0:
                 f(x)
         except: return False
         return True
