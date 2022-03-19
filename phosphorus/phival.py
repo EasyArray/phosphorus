@@ -456,6 +456,8 @@ class TupleVal(tuple, PhiVal):
 
 class SpanVal(PhiVal): #Todo inherit from span? Messes up printing?
     def __init__(self, span=Span()):
+        if not isinstance(span, Span):
+            span = Span.parse(span)
         self.span = span
             
     def type(self):
@@ -467,6 +469,9 @@ class SpanVal(PhiVal): #Todo inherit from span? Messes up printing?
     def __repr__(self):
         return str(self.span)
         #return repr(self.span)
+
+    def __bool__(self):
+        return bool(self.span)
     
     def debugstr(self):
         return self.span.debugstr()
