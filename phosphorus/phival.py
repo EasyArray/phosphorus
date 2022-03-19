@@ -3,6 +3,7 @@ from graphviz import Graph
 from numbers import Number
 import builtins; import ast
 import re; import time
+
 from .parse import Span, errors_on, log, debugging
 
 ip = get_ipython()
@@ -633,6 +634,10 @@ class SemType(TupleVal):
         if x is None:
             return ConstantVal('t') # small hack for uninterpretable lambda bodies
         
+        from .semval import SemLiteral
+        if isinstance(x, SemLiteral): # can't check equality of SemLiterals
+            return ConstantVal("t") 
+
         for t in SemType.D:
             if x in SemType.D[t]: return ConstantVal(t)
             
@@ -816,7 +821,8 @@ def ext(f,domain=map(ConstantVal,SemType.D["e"]),memoize=True):
         return out
     except Exception as e:
         #raise e
-        return Span.parse(f"ext({f})")
+        from .semval import SemLiteral
+        return SemLiteral(f"ext({f})")
     
 def ι(f, domain=None):
     try:
