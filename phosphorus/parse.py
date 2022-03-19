@@ -120,8 +120,11 @@ class Span(list):
                             self[n + 1].string == Token.delims[self[n - 1].string]
                     )
                     onlyItem = len(self) == 2 and n == 0 # check if result of substitution is the only thing in self
-                    # if len == 1, then there is only one token in item, so parens aren't needed
-                    if not (outerParens or onlyItem or len(item) == 1):
+                    singleItem = ( #check if we have one item or item(...) or item[...]
+                        len(item) == 1 or
+                        (len(item) == 2 and isinstance(item[1], Span))
+                    )
+                    if not (outerParens or onlyItem or singleItem):
                         # add surrounding parens if needed
                         item = Span.parse(spaces + "(" + s + ")")
                     DEBUGGING and mylog(f"Parsed: |{item}|") #Costly
@@ -147,8 +150,12 @@ class Span(list):
                             self[n + 2].string == Token.delims[self[n - 1].string]
                         )
                         onlyItem = len(self) == 2 and n == 0 # check if lambda call is the only thing in self
-                        # if len == 1, then there is only one token in item, so parens aren't needed
-                        if not (outerParens or onlyItem or len(Span.parse(item)) == 1):
+                        sp = Span.parse(item)
+                        singleItem = ( #check if we have one item or item(...) or item[...]
+                            len(sp) == 1 or
+                            (len(sp) == 2 and isinstance(sp[1], Span))
+                        )
+                        if not (outerParens or onlyItem or singleItem):
                             # add surrounding parens if needed
                             item = "(" + item + ")"
                         next(enum) #skip the arg
