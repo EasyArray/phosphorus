@@ -57,6 +57,9 @@ class SemLiteral(ConstantVal):
     def __eq__(self,other):
         return opcode(self, "==", other)
 
+    def __ne__(self,other):
+        return opcode(self, "!=", other)
+
     # Since SemLiterals do not have a known value, we don't want them
     # short-circuiting boolean "and" and "or" in python. 
     # We use & and | instead
