@@ -268,14 +268,20 @@ class LambdaVal(PhiVal):
     def __init__(self, args, body, guard=None, env={}):
         self.args = args; self.body = body; self.guard = guard; self.env = env
         self.stype = None
-        
+        self.reps = dict()
+    
     def __repr__(self):
+        envhash = tuple(sorted(self.env))
+        if envhash in self.reps: return self.reps[envhash]
+
         #print("Lambda body " + self.sub())
         err_status = errors_on(False) #suppress errors when printing out
         out = "[λ" + ", ".join(map(str,self.args))
         if self.guard is not None: out += f": {self.guard.update(self.env)}"
         out += "." + self.sub() + "]" #str(eval_n(self.sub())) + "]"
         errors_on(err_status)
+        self.reps[envhash] = out
+
         return out
     
     def __call__(self, *args, **kwargs):
@@ -347,7 +353,7 @@ class LambdaVal(PhiVal):
     def sub(self, bindings={}):
         subs = {**self.env}
         subs.update(bindings)
-        return str(self.body.update(subs))
+        return str(self.body.update(subs)) #Evaluates body
         
     def semtype(self):
         if not self.stype:
@@ -617,6 +623,13 @@ class ConstantVal(str, PhiVal):
         if variables:
             return super().is_variable(variables)
         return len(self)==1 and ord(self) > 909 and ord(self) < 991  #Single Greek letter
+
+    def __truediv__(self,other):
+        if τ(self) == other:
+            return self
+            
+        from .semval import SemVar
+        return SemVar(self,other)
 
     def __pos__(self): #TODO: remove?
         return lex[self]

@@ -44,8 +44,8 @@ class Token():
 
 
 class Span(list):    
-    def __init__(self, s=""):
-        self.type = None
+    def __init__(self, s="", type = None):
+        self.type = type
         self.spaceafter = ""
         super().__init__([])
         if s: Span.parse(s, None, self)
@@ -86,7 +86,28 @@ class Span(list):
         return len([o for o in self if o.string])
         
     #Idea: instead of just the lambdas, eval each Span as possible?
-    def update(self,subs):
+    def update(self, subs, ev=True):
+        if subs:
+            span = Span(type=self.type)
+            for n,item in enumerate(self):
+                if (item.type == NAME and item.string in subs 
+                        and (n+1 == len(self) or self[n+1].string != "=")):
+                    item = Span.parse(f"{item.spacebefore}({subs[item.string]})")
+
+                elif isinstance(item,Span): #infinite loop if substitute for self
+                    item = item.update(subs, False)
+                    
+                span.append(item)
+        else:
+            span = self
+        
+        if ev: 
+            out = span.ev_n()
+            span = Span.parse(str(out))
+            
+        return span
+
+    def update0(self,subs):
         def mylog(s): log(s,"Span.update")
         from .phival import LambdaVal, ConstantVal
         DEBUGGING = mylog("ENTER Span.update")

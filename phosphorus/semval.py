@@ -7,7 +7,10 @@ class SemEntity(ConstantVal):
     def type(self): return "e"
 
 def opcode(left, op, right):
-    return SpanVal(str(left) + " " + op + " " + str(right) )
+    #return SpanVal(str(left) + " " + op + " " + str(right) )
+    # A bit of a hack, since these should really be SpanVals, but I'm worried about 
+    # messing with SpanVals for now...
+    return SemLiteral(str(left) + " " + op + " " + str(right) )
     
 class SemLiteral(ConstantVal):
 #    def __init__(self,s): self.s = s
@@ -60,6 +63,9 @@ class SemLiteral(ConstantVal):
     def __ne__(self,other):
         return opcode(self, "!=", other)
 
+    def __le__(self,other):
+        return opcode(self, "<=", other)
+
     # Since SemLiterals do not have a known value, we don't want them
     # short-circuiting boolean "and" and "or" in python. 
     # We use & and | instead
@@ -72,9 +78,9 @@ class SemPred(ConstantVal):
         return SemLiteral("{}({})".format(repr(self),*args))
 
 class SemVar(ConstantVal):
-    def __new__(cls, s, t=None):
-        try:    (s, typ) = s.split("_")
-        except: typ = t
+    def __new__(cls, s, typ=None):
+        # try:    (s, typ) = s.split("_")
+        # except: typ = t
         
         self = ConstantVal.__new__(cls,s)
         self.typ = typ
@@ -95,7 +101,7 @@ class SemVar(ConstantVal):
         return self.typ
         
     def __repr__(self):
-        if self.typ: return self + "∈" + str(self.typ)
+        if self.typ: return self + "/" + str(self.typ)
         return self
         
     __str__ = __repr__
