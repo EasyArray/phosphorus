@@ -63,7 +63,7 @@ def replace_tree(n, item, parent):
         tree = parent[n+1]
         #Also check that the next item is a [ ] span, so we can use the word tree elsewhere:
         if not isinstance(tree,Span) or tree[0].string != '[': return False 
-    except IndexError: return false #Don't replace "tree" at the end
+    except IndexError: return False #Don't replace "tree" at the end
     
     tree = tree[1:-1] #ignore [ ]
     enum = enumerate(tree)
@@ -83,13 +83,37 @@ def replace_tree(n, item, parent):
     #print(parent[n])
     return True
     
-    
+
+def replace_explicit(n, item, parent):
+    """ Replaces one explicit function in span parent. Both item and the [ ] span after it
+        will be replaced. (Note that this involves altering a list while we are 
+        processing it -- kosher??)
+    """    
+
+    if item.string != "λ": return False #Explicit functions start with "λ"
+    try:
+        lst = parent[n+1]
+        # Ensure the next item is a span (hopefully a tuple, dict or set)
+        if not isinstance(lst, Span): return False
+    except IndexError: return False #Stop if at the end of a line
+
+    parent[n] = Token(NAME, "LambdaVal")
+    parent[n+1] = Span(f"(None,None,explicit=)")[0] #Span("()") makes a Span of a Span
+    parent[n+1][-1:-1] = lst
+
+    return True
+
+
 def replace_lambda(n, lam, parent):
     """ Replaces one phosphorus lambda notation in span parent. lam is the delimited Span
         containing the lambda function. Note that Span.parse will ignore substitutions
         in lambda spans to preserve original phosphorus code for printing.
     """
     if lam.type != "lambda": return False
+    if len(lam) < 5: return False # [λ.1]
+    if lam[1].string != "λ": return False #First item inside delims should be λ
+    if isinstance(lam[2], Span): return False #explicit function
+    
     parent[n] = Token(STRING, f'LambdaVal.parse("""{lam}""")', lam.spacebefore)
     #print(f"Replaced lambda: {lam} with '{lam.spacebefore}' before")
     return True
@@ -153,7 +177,8 @@ def _replace(n, item, parent):
     """ Internal version of replace: checks for replacing our special notations.
         Otherwise, recursively checks other Spans.
     """
-    if (replace_lambda(n, item, parent) or replace_comprehension(n, item, parent) 
+    if (replace_explicit(n,item,parent) or replace_lambda(n, item, parent) 
+            or replace_comprehension(n, item, parent) 
             or replace_tree(n,item,parent) or replace_lex(n,item,parent)): 
         return
     if isinstance(item,Span):

@@ -1,4 +1,5 @@
 """ Defines various kinds of PhiVals for storing Phosphorus Values """
+from locale import currency
 from graphviz import Graph
 from numbers import Number
 import builtins; import ast
@@ -265,13 +266,63 @@ class PhiVal(object):
             return self
         
 class LambdaVal(PhiVal):
-    def __init__(self, args, body, guard=None, env={}):
-        self.args = args; self.body = body; self.guard = guard; self.env = env
-        self.stype = None
+    def __init__(self, args, body, guard=None, env={}, explicit=None):
+        """ LambdaVal constructor
+            args, body, guard are all spans
+            To construct [λx : condition(x) . f(x)]:
+             - args would be "(x,)"
+             - body would be "f(x)"
+             - guard would be "condition(x)"
+            Generally, args contains the arguments of the function, guard
+            is a condition for the function to be run, and body is what
+            the function does to the arguments.
+            TODO: figure out env
+        """
+        self.explicit = False
+        if explicit is not None:
+            explicit = dict(explicit) # turns list of pairs into dict if needed
+            # basically just making a lambda wrapper around the dict
+            parsed = LambdaVal.parse(f"[λx . {explicit}[x]]")
+            self.args     = parsed.args
+            self.body     = parsed.body
+            self.guard    = parsed.guard
+            self.env      = parsed.env
+            self.stype    = parsed.stype
+            self.explicit = True
+        else:
+            self.args = args; self.body = body; self.guard = guard; self.env = env
+            self.stype = None
         
     def __repr__(self):
+        # for explicit functions, the repr is a set of pairs
+        if self.explicit:
+            pairs = []
+            currPair = ["",""]
+            currInd = 0
+            # loop through the span and collect pairs
+            for i in range(len(self.body[0])):
+                c = self.body[0][i].string
+                if c == ":":
+                    # switch to second part of currPair
+                    currInd = 1
+                elif c == "," and currInd == 1:
+                    # finish currPair and start new pair
+                    pairs.append(currPair)
+                    currInd = 0
+                    currPair = ["",""]
+                else:
+                    currPair[currInd] += c
+            # add last pair
+            pairs.append(currPair)
+            # clean up opening and closing delimiters
+            pairs[0][0] = pairs[0][0][1:]
+            pairs[-1][1] = pairs[-1][1][:-1]
+            # sort for good canonical hash
+            pairs = sorted(pairs)
+            return "λ[" + ", ".join(map(lambda p : p[0] + "⟶" + p[1], pairs)) + " ]"
         #print("Lambda body " + self.sub())
         err_status = errors_on(False) #suppress errors when printing out
+        # basically, just join all the parts of the Lambda together in a pretty way
         out = "[λ" + ", ".join(map(str,self.args))
         if self.guard is not None: out += f": {self.guard.update(self.env)}"
         out += "." + self.sub() + "]" #str(eval_n(self.sub())) + "]"
@@ -305,20 +356,28 @@ class LambdaVal(PhiVal):
         out = s.ev_n()     
         # TODO: catch ValueErrors about domain internally, but still return spans for others?
         return out
+    
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def parse(span):
         if isinstance(span,str): span = Span.parse(span.strip())[0]
+        # make sure Lambda is wrapped in delimiters
         g = iter(span)
         delim = next(g)
         if not delim.isopendelim(): 
             raise SyntaxError("Strange delimiter for lambda " + delim)
+        # make sure Lambda starts with λ
         curr = next(g)
         if curr.string != "λ": 
             raise SyntaxError("Incorrect operator for lambda" + curr.string)
+        # get the argument to the function
         arg = next(g)
         if not arg.isvariable(): 
             raise SyntaxError(f"Incorrect variable: {arg.string} with token type {arg.type}")
         arg = arg.string
+        # figure out the type of the argument
+        # if a type is not given, assume e
         curr = next(g).string
         from .semval import SemVar
         if curr == "∈" or curr == "/":
@@ -328,6 +387,7 @@ class LambdaVal(PhiVal):
             curr = next(g).string
         else: 
             arg = SemVar(arg,ConstantVal("e"))
+        # figure out if there is a guard/condition on the argument
         guard = None
         if curr == ":":
             guard = Span()
@@ -335,12 +395,12 @@ class LambdaVal(PhiVal):
                 if curr.string == ".": curr = "."; break
                 guard.append(curr)
         elif curr != ".": raise SyntaxError("Stray item before . in lambda: " + curr)
-        
+        # get the body of the function
         body = Span()
         for curr in g:
             if curr.isdelim(): break
             body.append(curr)
-        
+        # construct a LambdaVal from arg, body, guard
         return LambdaVal((arg,), body, guard) 
         #return f'LambdaVal(("""{arg}""",),"""{str(body).lstrip()}""","""{guard}""")'
     

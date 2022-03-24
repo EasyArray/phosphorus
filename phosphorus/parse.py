@@ -230,6 +230,7 @@ class Span(list):
         
     ignores = {INDENT, ENDMARKER, DEDENT, ENCODING}
     def parse(g,delim=None,span=None,subs={}):
+        def mylog(s): log(s,"Span.parse")
         if span is None: span = Span()
         def cleanup(g):
             """ Ignores non-printing tokens, but fixes spacing issues and 
@@ -274,27 +275,33 @@ class Span(list):
             delim = delim.string
             
         for tok in cleanup(g): #totokens(g):
-            #print("Found token ", tok.debugstr() if tok else "NONE")
+            mylog(f"Found token {tok.debugstr() if tok else 'NONE'}")
                 
             if not tok.isdelim():
-                if tok.string == 'λ':# or tok.string == "lambda":
+                if len(span) and span[-1].isdelim() and tok.string == 'λ':# or tok.string == "lambda":
+                    mylog("Inside lambda Span")
                     span.type = "lambda"
-                    subs = {}
+                    #subs = {}
                 span.append(tok)
 
             elif delim and tok.matches(delim):
-                #print("Close delim " + tok.string)
+                mylog("Close delim " + tok.string)
                 span.append(tok) #check for NEWLINE??
                 break
 
             elif tok.isopendelim():
-                #print("Open delim " + tok.string)
-                subspan = Span.parse(g,tok,subs=subs)
+                mylog("Open delim " + tok.string)
+                if len(span)>0 and span[-1].string == 'λ':
+                    mylog("Canceling lambda Span, explicit fn")
+                    span.type = ""
+                subspan = Span.parse(g,tok,subs={} if span.type == "lambda" else subs)
                 span.append(subspan)
 
             else: raise SyntaxError(f"Unmatched delimiter: {tok.debugstr()}")
+
+            first = False
         
-        #print(f"Parsed {span}", span.debugstr())
+        mylog(f"Parsed {span} {span.debugstr()}")
         return span
     
 def totokens(s):
