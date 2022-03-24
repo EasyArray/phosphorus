@@ -90,8 +90,10 @@ class Span(list):
         if subs:
             span = Span(type=self.type)
             for n,item in enumerate(self):
-                if (item.type == NAME and item.string in subs 
-                        and (n+1 == len(self) or self[n+1].string != "=")):
+                if (item.type == NAME and item.string in subs
+                        and (n==0 or self[n-1].string != "λ") #avoid λ vars
+                        and (n+1 == len(self) or self[n+1].string != "=") #avoid assignments
+                    ):
                     item = Span.parse(f"{item.spacebefore}({subs[item.string]})")
 
                 elif isinstance(item,Span): #infinite loop if substitute for self
@@ -101,9 +103,11 @@ class Span(list):
         else:
             span = self
         
-        if ev: 
-            out = span.ev_n()
-            span = Span.parse(str(out))
+        if ev:
+            try:
+                out = span.ev_n(throw_errors=True)
+                span = Span.parse(str(out))
+            except TypeError: pass
             
         return span
 
