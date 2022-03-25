@@ -42,6 +42,12 @@ class Token():
     def isvariable(self):
         return self.type == NAME
 
+class EvalError(Exception):
+    def __init__(self, span, err):
+        self.span = span
+        self.err = err
+        self.message = f"Evaluation Error {err} in {span}"
+        super().__init__(self.message)
 
 class Span(list):    
     def __init__(self, s="", type = None):
@@ -60,6 +66,10 @@ class Span(list):
     def semtype(self):
         from .phival import ConstantVal
         return ConstantVal("t")
+
+    def variables(self):
+        """ returns set of all variables/names that appear in self, as strings """
+        return {str(item) for item in self.leaves() if item.type == NAME}
     
     def __bool__(self): raise NotImplementedError
     
@@ -88,13 +98,28 @@ class Span(list):
     #Idea: instead of just the lambdas, eval each Span as possible?
     def update(self, subs, ev=True):
         if subs:
+            if self.type == "lambda":
+                arg = self[2].string #Note: technically just the FIRST argument
+                subs.pop(arg,"") #remove shadowed var from subs
+                subVariables = (var for val in subs.values() 
+                                    for var in Span(str(val)).variables())
+                if arg in subVariables:
+                    from itertools import count
+                    for newarg in (arg + str(i) for i in count()):
+                        if newarg not in subVariables: break
+                    subs[arg] = newarg
+
             span = Span(type=self.type)
+
             for n,item in enumerate(self):
                 if (item.type == NAME and item.string in subs
-                        and (n==0 or self[n-1].string != "λ") #avoid λ vars
+                        #and (n==0 or self[n-1].string != "λ") #avoid λ vars
                         and (n+1 == len(self) or self[n+1].string != "=") #avoid assignments
                     ):
-                    item = Span.parse(f"{item.spacebefore}({subs[item.string]})")
+                    substring = str(subs[item.string])
+                    if (len(Span.parse(substring)) > 1): substring = f"({substring})"
+                    substring = item.spacebefore + substring
+                    item = Span.parse(substring)
 
                 elif isinstance(item,Span): #infinite loop if substitute for self
                     item = item.update(subs, False)
