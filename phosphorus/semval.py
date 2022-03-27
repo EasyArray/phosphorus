@@ -11,7 +11,10 @@ def opcode(left, op, right):
     # A bit of a hack, since these should really be SpanVals, but I'm worried about 
     # messing with SpanVals for now...
     return SemLiteral(str(left) + " " + op + " " + str(right) )
-    
+
+def reallytrue(a) :
+    return (a == 1) or (a is True) 
+
 class SemLiteral(ConstantVal):
 #    def __init__(self,s): self.s = s
 #    def __repr__(self): return self.s
@@ -28,7 +31,7 @@ class SemLiteral(ConstantVal):
         try:
             # If the other item is truly true, return self,
             # if truly false, return 0 
-            return self if other else 0
+            return self if reallytrue(other) else 0
         except:
             # if neither true/false, return the original code
             return opcode(self, "∧", other)
@@ -36,21 +39,21 @@ class SemLiteral(ConstantVal):
     def __rand__(self,other): 
         # Same as above, but opposite order
         try: 
-            return self if other else 0
+            return self if reallytrue(other) else 0
         except: 
             return opcode(other, "∧", self)
 
     def __or__(self,other):
         # For or it's 1 if the other is true
         try:
-            return 1 if other else self
+            return 1 if reallytrue(other) else self
         except:
             return opcode(self, "∨", other)
 
     def __ror__(self,other): 
         # Other order
         try:
-            return 1 if other else self
+            return 1 if reallytrue(other) else self
         except:
             return opcode(other, "∨", self)
 
@@ -83,6 +86,7 @@ class SemVar(ConstantVal):
         # except: typ = t
         
         self = ConstantVal.__new__(cls,s)
+        self.name = s
         self.typ = typ
         return self
     

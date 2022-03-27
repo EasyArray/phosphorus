@@ -364,6 +364,25 @@ def load_ipython_extension(ip):
 from IPython.core.display import HTML
 def header(s, size="h3"): display(HTML(f"<{size}>{s}</{size}>"))
 
+answers = dict()
+def answer(ans, correct, name=None):
+    if not name: name = ans
+    header(f"{name}")
+
+    try:
+        from sys import _getframe
+        globals = _getframe(1).f_globals
+        locals = _getframe(1).f_locals
+        out = eval(ans,globals,locals)
+    except Exception as e:
+        out = str(e)
+
+    iscorrect = out == correct
+    answers[name] = (out,iscorrect)
+    print("Answer is", 
+            ("CORRECT:" if iscorrect else f"INCORRECT; Expecting {correct} and got:"))
+    return out
+
 if __name__ == "__main__":
     ip = get_ipython()
     load_ipython_extension(ip)

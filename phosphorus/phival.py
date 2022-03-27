@@ -427,6 +427,14 @@ class SetVal(frozenset,PhiVal):
     def __getitem__(self,x):
         return x in self
 
+    def __contains__(self, x: object) -> bool:
+        # raise an error if we attempt to call on a variable
+        from .semval import SemVar
+        if isinstance(x,SemVar):
+            raise NotImplementedError()
+
+        return super().__contains__(x)
+
     def __repr__(self):
         if not len(self): return '∅'
         return "{" + ", ".join(sorted(map(str, self))) + "}"
@@ -827,8 +835,20 @@ def noerr(f,*x,**k):
     except: return False
 
 def ext(f,domain=map(ConstantVal,SemType.D["e"]),memoize=True):
+    from .semval import SemLiteral
+
+    if isinstance(f,LambdaVal): pass
+        # if (len(f.body) == 2 and 
+        #     f.body[0].string.isidentifier() and
+        #     f.body[0].string.endswith("ʼ") and
+        #     isinstance(f.body[1], Span) and
+        #     f.body[1][1].string == f.args[0].name):
+        #     return SemLiteral(f.body[0].string)
+    else:
+        memoize = False
+
     if memoize:
-        hash = f"PHIEXTHASH#{f}#{domain}"
+        hash = f"PHIEXTHASH#{f.args}#{f.guard}#{f.body}#{domain}"
         if hash in memo: return memo[hash]
 
     try:
@@ -838,7 +858,6 @@ def ext(f,domain=map(ConstantVal,SemType.D["e"]),memoize=True):
         return out
     except Exception as e:
         #raise e
-        from .semval import SemLiteral
         return SemLiteral(f"ext({f})")
     
 def ι(f, domain=None):

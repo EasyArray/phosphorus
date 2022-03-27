@@ -132,7 +132,10 @@ class Span(list):
             try:
                 out = span.ev_n(throw_errors=True)
                 span = Span.parse(str(out))
-            except TypeError: pass
+            except TypeError: 
+                pass
+            except NotImplementedError:
+                pass
             
         return span
 
